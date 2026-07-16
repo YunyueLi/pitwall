@@ -1,0 +1,22 @@
+{
+  "name": "agentos",
+  "version": "0.1.0",
+  "description": "A local-first control plane for heterogeneous coding agents collaborating on one repository — one authoritative ledger, one console, recoverable by design.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "agentos": "./bin/agentos.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "npm run build && node --test \"dist/test/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}
