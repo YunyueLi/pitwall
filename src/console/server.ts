@@ -144,10 +144,13 @@ async function handle(orch: ConsoleBackend, req: IncomingMessage, res: ServerRes
 
 function serializeState(orch: ConsoleBackend): unknown {
   const s = orch.state();
+  const events = orch.events();
   return {
     runId: s.runId,
     repo: s.repo,
     mode: orch.mode(),
+    startedTs: events[0]?.ts,
+    lastTs: events[events.length - 1]?.ts,
     status: s.status,
     statusReason: s.statusReason,
     goal: s.goalHistory[s.goalHistory.length - 1]?.text ?? '',
