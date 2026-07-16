@@ -40,20 +40,17 @@ export class CodexAdapter implements AgentAdapter {
     if (this.child) throw new Error(`${this.spec.name}: turn already in flight`);
     this.interrupted = false;
 
-    const common = [
-      '--json',
-      '--skip-git-repo-check',
-      '--cd',
-      this.repo,
-      '--sandbox',
-      this.spec.sandbox === 'read-only' ? 'read-only' : 'workspace-write',
-    ];
-    if (this.spec.model) common.push('--model', this.spec.model);
-
-    const args =
-      opts.resumeExisting && opts.nativeSessionId
-        ? ['exec', 'resume', opts.nativeSessionId, ...common, '-']
-        : ['exec', ...common, '-'];
+    const sandboxMode = this.spec.sandbox === 'read-only' ? 'read-only' : 'workspace-write';
+    let args: string[];
+    if (opts.resumeExisting && opts.nativeSessionId) {
+      // `exec resume` rejects --sandbox/--cd (they persist with the session);
+      // sandbox is re-asserted via config override, cwd via child cwd.
+      args = ['exec', 'resume', opts.nativeSessionId, '--json', '--skip-git-repo-check', '-c', `sandbox_mode="${sandboxMode}"`];
+    } else {
+      args = ['exec', '--json', '--skip-git-repo-check', '--cd', this.repo, '--sandbox', sandboxMode];
+    }
+    if (this.spec.model) args.push('--model', this.spec.model);
+    args.push('-');
 
     const child = spawn('codex', args, {
       cwd: this.repo,

@@ -228,14 +228,30 @@ export class Orchestrator {
       const state = this.state();
       if (state.status === 'done' || state.status === 'failed') return;
 
+      // Apply any resolved-but-unapplied acceptance decision. Derived from the
+      // ledger (not an in-memory callback) so it survives process restarts.
+      const task = [...state.tasks.values()][0];
+      if (!task) throw new Error('run has no task');
+      const acceptance = this.unappliedAcceptance(state, task.taskId);
+      if (acceptance) {
+        if (acceptance.decision === 'allow') {
+          this.append(SYSTEM, { type: 'task.updated', taskId: task.taskId, status: 'accepted', note: acceptance.note });
+        } else {
+          this.append(SYSTEM, {
+            type: 'task.updated',
+            taskId: task.taskId,
+            status: 'in-progress',
+            note: `human rejected acceptance${acceptance.note ? `: ${acceptance.note}` : ''}`,
+          });
+        }
+        continue;
+      }
+
       const pendingApproval = [...state.approvals.values()].find((a) => !a.decision);
       if (pendingApproval || this.runPaused || state.status === 'paused') {
         await this.waitForSignal();
         continue;
       }
-
-      const task = [...state.tasks.values()][0];
-      if (!task) throw new Error('run has no task');
 
       if (task.status === 'accepted') {
         this.append(SYSTEM, { type: 'run.status', status: 'done', reason: 'task accepted by human' });
@@ -397,8 +413,8 @@ export class Orchestrator {
         summary,
         detail: reply.json?.summary ?? result.finalText.slice(0, 2000),
       });
-      // Loop will now wait; on allow → accepted → done. On deny → back to driver.
-      this.installAcceptanceHandler(task.taskId);
+      // The main loop applies the decision once resolved (ledger-derived, so
+      // it also works after a crash and restart).
     } else {
       this.append(SYSTEM, {
         type: 'task.updated',
@@ -411,24 +427,28 @@ export class Orchestrator {
   }
 
   /** Applies the effect of an acceptance decision as soon as it is resolved. */
-  private installAcceptanceHandler(taskId: string): void {
-    const un = this.ledger.subscribe((env) => {
+  private unappliedAcceptance(
+    state: RunState,
+    taskId: string,
+  ): { decision: 'allow' | 'deny'; note?: string } | undefined {
+    // Find the newest resolved acceptance approval, and the newest task status
+    // change; the decision is unapplied iff it is newer than the status change.
+    let decisionSeq = 0;
+    let decision: { decision: 'allow' | 'deny'; note?: string } | undefined;
+    let taskChangeSeq = 0;
+    for (const env of this.history) {
       const e = env.event;
-      if (e.type !== 'approval.resolved') return;
-      const ap = this.state().approvals.get(e.approvalId);
-      if (!ap || ap.gate !== 'acceptance') return;
-      un();
-      if (e.decision === 'allow') {
-        this.append(SYSTEM, { type: 'task.updated', taskId, status: 'accepted', note: e.note });
-      } else {
-        this.append(SYSTEM, {
-          type: 'task.updated',
-          taskId,
-          status: 'in-progress',
-          note: `human rejected acceptance${e.note ? `: ${e.note}` : ''}`,
-        });
+      if (e.type === 'approval.resolved') {
+        const ap = state.approvals.get(e.approvalId);
+        if (ap?.gate === 'acceptance') {
+          decisionSeq = env.seq;
+          decision = { decision: e.decision, note: e.note };
+        }
+      } else if (e.type === 'task.updated' && e.taskId === taskId && e.status) {
+        taskChangeSeq = env.seq;
       }
-    });
+    }
+    return decision && decisionSeq > taskChangeSeq ? decision : undefined;
   }
 
   private async executeTurn(
@@ -483,12 +503,16 @@ export class Orchestrator {
           case 'tool-use':
             this.append({ kind: 'agent', agent: agentName }, { type: 'tool.used', agent: agentName, turnId, tool: e.tool, summary: e.summary });
             break;
-          case 'file-change':
+          case 'file-change': {
+            const rel = e.path.startsWith(this.config.repo + '/')
+              ? e.path.slice(this.config.repo.length + 1)
+              : e.path;
             this.append(
               { kind: 'agent', agent: agentName },
-              { type: 'files.changed', agent: agentName, turnId, changes: [{ path: e.path, kind: e.change }], source: 'tool' },
+              { type: 'files.changed', agent: agentName, turnId, changes: [{ path: rel, kind: e.change }], source: 'tool' },
             );
             break;
+          }
           case 'assistant-text':
             break; // final text becomes a message; intermediate text stays in raw
         }
