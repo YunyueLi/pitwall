@@ -5,7 +5,7 @@ import { readLedgerFile } from './core/ledger.js';
 import { reduce, currentGoal } from './core/state.js';
 import { clearControl, listRuns, readControl, resolveRunId, runDir } from './core/store.js';
 import { Orchestrator, type RunConfig } from './orchestrator/orchestrator.js';
-import { startControlServer } from './console/server.js';
+import { startControlServer, type ConsoleBackend } from './console/server.js';
 
 const VERSION = '0.1.0';
 
@@ -24,6 +24,7 @@ Usage:
   agentos pause [runId] [--agent <name>] [--interrupt] Pause run or one agent
   agentos unpause [runId] [--agent <name>]             Unpause run or one agent
   agentos watch [runId]                                Follow the timeline in the terminal
+  agentos view [runId] [--port <n>]                    Open the web console for a finished run (read-only)
   agentos stop [runId]                                 Stop a live orchestrator gracefully
 
 Options for run:
@@ -64,6 +65,8 @@ async function main(): Promise<void> {
       return cmdPause(rest, false);
     case 'watch':
       return cmdWatch(rest);
+    case 'view':
+      return cmdView(rest);
     case 'stop':
       return cmdStop(rest);
     case '--version':
@@ -335,6 +338,35 @@ async function cmdWatch(argv: string[]): Promise<void> {
       if (chunk.startsWith('data: ')) printTimeline([JSON.parse(chunk.slice(6))], true);
     }
   }
+}
+
+async function cmdView(argv: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args: argv,
+    options: { port: { type: 'string', default: '0' } },
+    allowPositionals: true,
+  });
+  const runId = resolveRunId(positionals[0]);
+  const live = readControl(runDir(runId));
+  if (live) {
+    console.log(`run is live — console at http://127.0.0.1:${live.port}/`);
+    return;
+  }
+  const history = readLedgerFile(join(runDir(runId), 'events.jsonl'));
+  const created = history.find((e) => e.event.type === 'run.created')?.event;
+  const meta = created && created.type === 'run.created' ? created : undefined;
+  const backend: ConsoleBackend = {
+    dir: runDir(runId),
+    readonly: true,
+    state: () => reduce(history),
+    events: () => history,
+    subscribe: () => () => {},
+    criteria: () => meta?.criteria ?? [],
+    mode: () => meta?.mode ?? 'pair',
+  };
+  const { port } = await startControlServer(backend, Number(values.port));
+  console.log(`read-only console for ${runId}: http://127.0.0.1:${port}/  (Ctrl-C to close)`);
+  await new Promise(() => {}); // serve until interrupted
 }
 
 async function cmdStop(argv: string[]): Promise<void> {

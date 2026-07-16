@@ -11,19 +11,38 @@ import { UI_HTML } from './ui.js';
  * talks to. It binds to 127.0.0.1 only: the ledger contains prompts, diffs
  * and repo paths, none of which belong on the network by default.
  */
-export function startControlServer(orch: Orchestrator, preferredPort = 0): Promise<{ server: Server; port: number }> {
+export interface ConsoleBackend {
+  dir: string;
+  state(): ReturnType<Orchestrator['state']>;
+  events(): ReturnType<Orchestrator['events']>;
+  subscribe(fn: Parameters<Orchestrator['subscribe']>[0]): () => void;
+  criteria(): string[];
+  mode(): 'pair' | 'team';
+  readonly?: boolean;
+  directive?(scope: string, mode: 'supplement' | 'override', text: string, interrupt: boolean): string;
+  updateGoal?(text: string, mode: 'supplement' | 'override'): void;
+  resolveApproval?(approvalId: string, decision: 'allow' | 'deny', note?: string): void;
+  setAgentPaused?(agent: string, paused: boolean, interrupt?: boolean): void;
+  setRunPaused?(paused: boolean): void;
+  addNote?(text: string): void;
+  stop?(): Promise<void>;
+}
+
+export function startControlServer(orch: ConsoleBackend, preferredPort = 0): Promise<{ server: Server; port: number }> {
   const server = createServer((req, res) => handle(orch, req, res));
   return new Promise((resolve, reject) => {
     server.on('error', reject);
     server.listen(preferredPort, '127.0.0.1', () => {
       const port = (server.address() as { port: number }).port;
-      writeControl(orch.dir, { pid: process.pid, port, startedAt: new Date().toISOString() });
+      if (!orch.readonly) {
+        writeControl(orch.dir, { pid: process.pid, port, startedAt: new Date().toISOString() });
+      }
       resolve({ server, port });
     });
   });
 }
 
-async function handle(orch: Orchestrator, req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handle(orch: ConsoleBackend, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
   try {
     if (req.method === 'GET' && url.pathname === '/') {
@@ -75,10 +94,14 @@ async function handle(orch: Orchestrator, req: IncomingMessage, res: ServerRespo
     }
 
     if (req.method === 'POST') {
+      if (orch.readonly) {
+        json(res, 403, { error: 'read-only console: the run is not live (use `agentos resume` to drive it)' });
+        return;
+      }
       const body = await readBody(req);
       switch (url.pathname) {
         case '/api/directive': {
-          const id = orch.directive(
+          const id = orch.directive!(
             String(body.scope ?? 'all'),
             body.mode === 'override' ? 'override' : 'supplement',
             String(body.text ?? ''),
@@ -88,28 +111,28 @@ async function handle(orch: Orchestrator, req: IncomingMessage, res: ServerRespo
           return;
         }
         case '/api/goal':
-          orch.updateGoal(String(body.text ?? ''), body.mode === 'supplement' ? 'supplement' : 'override');
+          orch.updateGoal!(String(body.text ?? ''), body.mode === 'supplement' ? 'supplement' : 'override');
           json(res, 200, { ok: true });
           return;
         case '/api/approval':
-          orch.resolveApproval(String(body.approvalId), body.decision === 'allow' ? 'allow' : 'deny', body.note ? String(body.note) : undefined);
+          orch.resolveApproval!(String(body.approvalId), body.decision === 'allow' ? 'allow' : 'deny', body.note ? String(body.note) : undefined);
           json(res, 200, { ok: true });
           return;
         case '/api/agent-pause':
-          orch.setAgentPaused(String(body.agent), !!body.paused, !!body.interrupt);
+          orch.setAgentPaused!(String(body.agent), !!body.paused, !!body.interrupt);
           json(res, 200, { ok: true });
           return;
         case '/api/run-pause':
-          orch.setRunPaused(!!body.paused);
+          orch.setRunPaused!(!!body.paused);
           json(res, 200, { ok: true });
           return;
         case '/api/note':
-          orch.addNote(String(body.text ?? ''));
+          orch.addNote!(String(body.text ?? ''));
           json(res, 200, { ok: true });
           return;
         case '/api/stop':
           json(res, 200, { ok: true });
-          setTimeout(() => void orch.stop(), 50);
+          setTimeout(() => void orch.stop!(), 50);
           return;
       }
     }
@@ -119,7 +142,7 @@ async function handle(orch: Orchestrator, req: IncomingMessage, res: ServerRespo
   }
 }
 
-function serializeState(orch: Orchestrator): unknown {
+function serializeState(orch: ConsoleBackend): unknown {
   const s = orch.state();
   return {
     runId: s.runId,
