@@ -138,6 +138,124 @@ export function parseAgentReply(text: string): AgentReply {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Team mode: director plans and reviews; engineer implements task by task.
+
+export interface PlanTurnContext {
+  goal: string;
+  criteria: string[];
+  engineerName: string;
+  standingDirectives: DirectiveState[];
+  newDirectives: DirectiveState[];
+  /** Set when the human rejected a previous plan or milestone. */
+  humanNote?: string;
+  /** Titles of tasks already accepted (re-planning adds remedial tasks only). */
+  acceptedTasks: string[];
+  recovery?: string;
+}
+
+export function directorPlanPrompt(ctx: PlanTurnContext): string {
+  const parts: string[] = [];
+  parts.push(
+    `You are the director agent in an AgentOS team run. You do not write code. You study this repository, then break the goal below into a short sequence of concrete tasks for the engineer agent ("${ctx.engineerName}") to implement one by one. Every task you emit will appear on the human's board and be executed literally — plan like a tech lead, not like a brainstorm.`,
+  );
+  parts.push(PROVENANCE_RULES);
+  parts.push(`Goal:\n${ctx.goal}`);
+  if (ctx.criteria.length) {
+    parts.push(`Overall completion criteria:\n` + ctx.criteria.map((c, i) => `${i + 1}. ${c}`).join('\n'));
+  }
+  for (const d of ctx.standingDirectives) parts.push(`Standing directive:\n${humanDirectiveBlock(d)}`);
+  for (const d of ctx.newDirectives) parts.push(`New directive:\n${humanDirectiveBlock(d)}`);
+  if (ctx.acceptedTasks.length) {
+    parts.push(
+      `Already completed and accepted (do NOT re-plan these):\n` +
+        ctx.acceptedTasks.map((t) => `- ${t}`).join('\n'),
+    );
+  }
+  if (ctx.humanNote) {
+    parts.push(`The human reviewed the previous plan/result and requires changes:\n[HUMAN DIRECTIVE]\n${ctx.humanNote}\n[END DIRECTIVE]`);
+  }
+  if (ctx.recovery) parts.push(ctx.recovery);
+  parts.push(
+    `Inspect the repository (read-only) first so tasks fit the codebase as it actually is. Then produce 2–5 tasks. Each task must be a vertical slice: independently implementable, independently verifiable, with 1–3 checkable completion criteria. Order matters; use "dependsOn" (indices into your own list) only when strictly required.`,
+  );
+  parts.push(`End your reply with exactly one fenced code block tagged "agentos" containing:
+\`\`\`agentos
+{"plan": [{"title": "…", "description": "what and why, concretely", "criteria": ["checkable statement", "…"], "dependsOn": []}]}
+\`\`\``);
+  return parts.join('\n\n');
+}
+
+export interface EngineerTurnContext {
+  goal: string;
+  task: { taskId: string; title: string; description: string; criteria: string[] };
+  directorName: string;
+  standingDirectives: DirectiveState[];
+  newDirectives: DirectiveState[];
+  objection?: string;
+  humanNote?: string;
+  recovery?: string;
+}
+
+export function engineerTaskPrompt(ctx: EngineerTurnContext): string {
+  const parts: string[] = [];
+  parts.push(
+    `You are the engineer agent in an AgentOS team run. The director agent ("${ctx.directorName}") planned the work; the human supervises. You implement ONE task per turn — the one below — nothing more. Scope discipline is part of the review.`,
+  );
+  parts.push(PROVENANCE_RULES);
+  parts.push(`Overall goal (context only, do not implement beyond your task):\n${ctx.goal}`);
+  parts.push(
+    `Your task now: ${ctx.task.title}\n${ctx.task.description}\n\nTask completion criteria (you will be judged on these, item by item):\n` +
+      ctx.task.criteria.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+  );
+  for (const d of ctx.standingDirectives) parts.push(`Standing directive:\n${humanDirectiveBlock(d)}`);
+  for (const d of ctx.newDirectives) parts.push(`New directive:\n${humanDirectiveBlock(d)}`);
+  if (ctx.objection) {
+    parts.push(`The director reviewed your work on this task and objected — address or rebut:\n${agentQuote(ctx.directorName, ctx.objection)}`);
+  }
+  if (ctx.humanNote) {
+    parts.push(`The human weighed in on this task:\n[HUMAN DIRECTIVE]\n${ctx.humanNote}\n[END DIRECTIVE]`);
+  }
+  if (ctx.recovery) parts.push(ctx.recovery);
+  parts.push(
+    `Work in the repository (current directory). Implement the task, run whatever checks the repo supports, and report honestly what remains unverified.`,
+  );
+  parts.push(`${OUTPUT_CONTRACT}
+Use {"status":"done","summary":"…"} when this task's criteria are met and verified as far as you can; {"status":"blocked","summary":"…","question":"…"} if you cannot proceed without human input.`);
+  return parts.join('\n\n');
+}
+
+export interface DirectorReviewContext {
+  goal: string;
+  task: { taskId: string; title: string; description: string; criteria: string[] };
+  engineerName: string;
+  engineerReport: string;
+  round: number;
+  standingDirectives: DirectiveState[];
+  newDirectives: DirectiveState[];
+  recovery?: string;
+}
+
+export function directorReviewPrompt(ctx: DirectorReviewContext): string {
+  const parts: string[] = [];
+  parts.push(
+    `You are the director agent in an AgentOS team run, reviewing (round ${ctx.round}) the engineer's work on one task you planned. Judge the actual working tree, not the report. You have read-only access.`,
+  );
+  parts.push(PROVENANCE_RULES);
+  parts.push(`Overall goal:\n${ctx.goal}`);
+  parts.push(
+    `Task under review: ${ctx.task.title}\n${ctx.task.description}\n\nIts criteria — address each one explicitly:\n` +
+      ctx.task.criteria.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+  );
+  for (const d of ctx.standingDirectives) parts.push(`Standing directive (work must comply):\n${humanDirectiveBlock(d)}`);
+  for (const d of ctx.newDirectives) parts.push(`New directive:\n${humanDirectiveBlock(d)}`);
+  parts.push(`Engineer's report:\n${agentQuote(ctx.engineerName, ctx.engineerReport)}`);
+  if (ctx.recovery) parts.push(ctx.recovery);
+  parts.push(`${OUTPUT_CONTRACT}
+Use {"verdict":"approve","summary":"…"} only if you verified each criterion yourself; otherwise {"verdict":"objection","summary":"…","required_changes":["specific actionable items"]}.`);
+  return parts.join('\n\n');
+}
+
 export function recoveryPreamble(originalInput: string): string {
   return [
     `RECOVERY NOTICE: your previous turn was interrupted (process crash or operator interrupt) and may have partially executed.`,

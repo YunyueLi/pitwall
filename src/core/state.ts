@@ -27,6 +27,7 @@ export interface TaskState {
   taskId: string;
   title: string;
   description: string;
+  criteria: string[];
   assignee: string;
   dependsOn: string[];
   status: TaskStatus;
@@ -50,7 +51,8 @@ export interface ApprovalState {
   approvalId: string;
   ts: string;
   agent?: string;
-  gate: 'tool' | 'acceptance' | 'plan';
+  gate: 'tool' | 'acceptance' | 'plan' | 'task';
+  taskId?: string;
   summary: string;
   detail?: string;
   decision?: 'allow' | 'deny';
@@ -127,6 +129,7 @@ export function reduce(history: Envelope[]): RunState {
           taskId: e.taskId,
           title: e.title,
           description: e.description,
+          criteria: e.criteria ?? [],
           assignee: e.assignee,
           dependsOn: e.dependsOn,
           status: 'pending',
@@ -192,6 +195,7 @@ export function reduce(history: Envelope[]): RunState {
           ts: env.ts,
           agent: e.agent,
           gate: e.gate,
+          taskId: e.taskId,
           summary: e.summary,
           detail: e.detail,
         });

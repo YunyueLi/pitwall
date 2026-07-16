@@ -76,9 +76,11 @@ agentos approve
 
 ## What actually happens
 
-The MVP ships one collaboration protocol — the smallest loop that exercises
-handoff, dissent, correction and acceptance. Roles are configuration, not
-code: `--driver codex --reviewer claude-code` swaps the seats.
+Two collaboration protocols ship today. Roles are configuration, not code —
+either vendor can hold either seat.
+
+**Pair mode** (default) — the smallest loop that exercises handoff, dissent,
+correction and acceptance:
 
 ```
         goal + completion criteria (human)
@@ -99,15 +101,24 @@ code: `--driver codex --reviewer claude-code` swaps the seats.
                                 done
 ```
 
-Human directives (`agentos tell`) are routed by scope (one agent / all),
-carry `supplement` or `override` semantics, take effect at the next turn
-boundary (or immediately with `--interrupt`), and every delivery is
-acknowledged in the timeline — "who has seen this instruction" is always
-answerable.
+**Team mode** (`--mode team`) — a director agent (default: Claude, read-only)
+studies the repo and breaks the goal into a task board; after you approve the
+plan, an engineer agent (default: Codex, workspace-write) implements the
+tasks in an autonomous loop, with the director reviewing each one against its
+criteria. You watch the board, and gates come to you only at the edges:
 
-Cross-agent content is provenance-labeled in prompts: peer output is a
-colleague's claim to verify, never a human instruction. Only
-`[HUMAN DIRECTIVE]` blocks carry human authority.
+```
+   goal ──► director plans ──► PLAN GATE (human) ──► engineer builds task N
+                ▲                                        │ report
+                │ milestone rejected w/ note             ▼
+                │                            director reviews task N
+   HUMAN ◄── MILESTONE GATE ◄── all tasks ◄── approve │ objection ──► retry
+                                accepted              (3 strikes → human tie-break)
+```
+
+Anytime, in either mode: `agentos tell` routes a directive to one agent or
+all, as a supplement or an override, at the next turn boundary or immediately
+with `--interrupt` — always with a delivery receipt in the timeline.
 
 ## Architecture
 

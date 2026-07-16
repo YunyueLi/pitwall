@@ -10,19 +10,28 @@ import {
   pendingDirectivesFor,
   reduce,
   type RunState,
+  type TaskState,
 } from '../core/state.js';
 import { RawLog, createRunDir, openRun, runDir } from '../core/store.js';
 import {
+  directorPlanPrompt,
+  directorReviewPrompt,
   driverPrompt,
+  engineerTaskPrompt,
   parseAgentReply,
   recoveryPreamble,
   reviewerPrompt,
 } from './prompts.js';
 
+type StepResult = 'ok' | 'error' | 'interrupted' | 'timeout' | 'wait' | 'applied' | 'done';
+
 export interface RunConfig {
   goal: string;
   criteria: string[];
   repo: string;
+  /** 'pair': driver implements, reviewer audits. 'team': director plans and
+   * reviews task by task; engineer implements in an autonomous loop. */
+  mode: 'pair' | 'team';
   driver: AgentSpec;
   reviewer: AgentSpec;
   maxReviewRounds: number;
@@ -80,20 +89,25 @@ export class Orchestrator {
       type: 'run.created',
       runId,
       goal: config.goal,
+      criteria: config.criteria,
+      mode: config.mode,
       repo: config.repo,
       agents: [config.driver, config.reviewer],
       agentosVersion,
     });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.driver });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.reviewer });
-    orch.append(HUMAN, {
-      type: 'task.created',
-      taskId: newId('task'),
-      title: `Implement: ${config.goal.slice(0, 80)}`,
-      description: [config.goal, ...config.criteria.map((c, i) => `criterion ${i + 1}: ${c}`)].join('\n'),
-      assignee: config.driver.name,
-      dependsOn: [],
-    });
+    if (config.mode === 'pair') {
+      orch.append(HUMAN, {
+        type: 'task.created',
+        taskId: newId('task'),
+        title: `Implement: ${config.goal.slice(0, 80)}`,
+        description: config.goal,
+        criteria: config.criteria,
+        assignee: config.driver.name,
+        dependsOn: [],
+      });
+    }
     return orch;
   }
 
@@ -102,11 +116,11 @@ export class Orchestrator {
     const { ledger, history } = openRun(dir);
     const created = history.find((e) => e.event.type === 'run.created')?.event;
     if (!created || created.type !== 'run.created') throw new Error(`run ${runId} has no run.created event`);
-    const criteria = extractCriteria(history);
     const config: RunConfig = {
       goal: created.goal,
-      criteria,
+      criteria: created.criteria ?? extractCriteria(history),
       repo: created.repo,
+      mode: created.mode ?? 'pair',
       driver: created.agents[0]!,
       reviewer: created.agents[1]!,
       maxReviewRounds: overrides.maxReviewRounds ?? 3,
@@ -151,6 +165,10 @@ export class Orchestrator {
 
   criteria(): string[] {
     return this.config.criteria;
+  }
+
+  mode(): 'pair' | 'team' {
+    return this.config.mode;
   }
 
   directive(scope: string, mode: 'supplement' | 'override', text: string, interrupt: boolean): string {
@@ -228,50 +246,22 @@ export class Orchestrator {
       const state = this.state();
       if (state.status === 'done' || state.status === 'failed') return;
 
-      // Apply any resolved-but-unapplied acceptance decision. Derived from the
-      // ledger (not an in-memory callback) so it survives process restarts.
-      const task = [...state.tasks.values()][0];
-      if (!task) throw new Error('run has no task');
-      const acceptance = this.unappliedAcceptance(state, task.taskId);
-      if (acceptance) {
-        if (acceptance.decision === 'allow') {
-          this.append(SYSTEM, { type: 'task.updated', taskId: task.taskId, status: 'accepted', note: acceptance.note });
-        } else {
-          this.append(SYSTEM, {
-            type: 'task.updated',
-            taskId: task.taskId,
-            status: 'in-progress',
-            note: `human rejected acceptance${acceptance.note ? `: ${acceptance.note}` : ''}`,
-          });
-        }
-        continue;
-      }
+      const step = this.config.mode === 'team' ? await this.teamStep(state) : await this.pairStep(state);
 
-      const pendingApproval = [...state.approvals.values()].find((a) => !a.decision);
-      if (pendingApproval || this.runPaused || state.status === 'paused') {
-        await this.waitForSignal();
-        continue;
-      }
-
-      if (task.status === 'accepted') {
-        this.append(SYSTEM, { type: 'run.status', status: 'done', reason: 'task accepted by human' });
+      if (step === 'done') {
+        this.append(SYSTEM, { type: 'run.status', status: 'done', reason: 'accepted by human' });
         return;
       }
-
-      const phase: 'driver' | 'reviewer' = task.status === 'needs-review' ? 'reviewer' : 'driver';
-      const agentName = phase === 'driver' ? this.config.driver.name : this.config.reviewer.name;
-      if (this.pausedAgents.has(agentName)) {
+      if (step === 'wait') {
         await this.waitForSignal();
         continue;
       }
-
-      const outcome = phase === 'driver' ? await this.driverTurn() : await this.reviewerTurn();
-      if (outcome === 'interrupted') {
-        // Either a human interrupt-directive (fold in and retry) or stop().
+      if (step === 'applied') continue; // a ledger-derived decision was applied; re-evaluate
+      if (step === 'interrupted') {
         if (this.stopping) return;
         continue;
       }
-      if (outcome === 'timeout') {
+      if (step === 'timeout') {
         timeoutRetries += 1;
         if (timeoutRetries >= 2) {
           this.append(SYSTEM, {
@@ -284,7 +274,7 @@ export class Orchestrator {
         continue;
       }
       timeoutRetries = 0;
-      if (outcome === 'error') {
+      if (step === 'error') {
         this.append(SYSTEM, {
           type: 'run.status',
           status: 'paused',
@@ -295,6 +285,408 @@ export class Orchestrator {
       }
     }
     this.append(SYSTEM, { type: 'run.status', status: 'paused', reason: 'orchestrator stopped' });
+  }
+
+  private globallyBlocked(state: RunState): boolean {
+    const pendingApproval = [...state.approvals.values()].find((a) => !a.decision);
+    return !!pendingApproval || this.runPaused || state.status === 'paused';
+  }
+
+  // -- pair mode (driver implements, reviewer audits) -------------------------
+
+  private async pairStep(state: RunState): Promise<StepResult> {
+    const task = [...state.tasks.values()][0];
+    if (!task) throw new Error('run has no task');
+
+    const acceptance = this.unappliedAcceptance(state, task.taskId);
+    if (acceptance) {
+      if (acceptance.decision === 'allow') {
+        this.append(SYSTEM, { type: 'task.updated', taskId: task.taskId, status: 'accepted', note: acceptance.note });
+      } else {
+        this.append(SYSTEM, {
+          type: 'task.updated',
+          taskId: task.taskId,
+          status: 'in-progress',
+          note: `human rejected acceptance${acceptance.note ? `: ${acceptance.note}` : ''}`,
+        });
+      }
+      return 'applied';
+    }
+
+    if (this.globallyBlocked(state)) return 'wait';
+    if (task.status === 'accepted') return 'done';
+
+    const phase: 'driver' | 'reviewer' = task.status === 'needs-review' ? 'reviewer' : 'driver';
+    const agentName = phase === 'driver' ? this.config.driver.name : this.config.reviewer.name;
+    if (this.pausedAgents.has(agentName)) return 'wait';
+
+    return phase === 'driver' ? this.driverTurn() : this.reviewerTurn();
+  }
+
+  // -- team mode (director plans + reviews; engineer builds task by task) -----
+
+  private async teamStep(state: RunState): Promise<StepResult> {
+    const engineer = this.config.driver; // workspace-write seat
+    const director = this.config.reviewer; // read-only seat
+    const active = [...state.tasks.values()].filter((t) => t.status !== 'superseded');
+    const batchSeq = this.lastTaskCreatedSeq();
+
+    // 1. Apply ledger-derived gate decisions (survives crashes and restarts).
+    const milestone = this.newestGate('acceptance');
+    if (milestone?.resolved === 'allow' && milestone.resolvedSeq! > batchSeq) return 'done';
+
+    const planGate = this.newestGate('plan');
+    if (planGate?.resolved === 'deny') {
+      const victims = active.filter(
+        (t) => t.status !== 'accepted' && this.taskCreatedSeq(t.taskId) < planGate.resolvedSeq!,
+      );
+      if (victims.length) {
+        for (const t of victims) {
+          this.append(SYSTEM, { type: 'task.updated', taskId: t.taskId, status: 'superseded', note: 'plan rejected by human' });
+        }
+        return 'applied';
+      }
+    }
+    for (const t of active) {
+      const g = this.newestGate('task', t.taskId);
+      if (g?.resolved && g.resolvedSeq! > this.lastTaskUpdateSeq(t.taskId)) {
+        if (g.resolved === 'allow') {
+          this.append(SYSTEM, { type: 'task.updated', taskId: t.taskId, status: 'accepted', note: g.note ?? 'accepted by human tie-break' });
+        } else {
+          this.append(SYSTEM, {
+            type: 'task.updated',
+            taskId: t.taskId,
+            status: 'in-progress',
+            note: `human sided with the objection${g.note ? `: ${g.note}` : ''}`,
+          });
+        }
+        return 'applied';
+      }
+    }
+
+    // 2. Global blocks (pending approvals, paused run).
+    if (this.globallyBlocked(state)) return 'wait';
+
+    // 3. Pick the next move.
+    if (!active.length) {
+      if (this.pausedAgents.has(director.name)) return 'wait';
+      return this.directorPlanTurn(state);
+    }
+    if (!(planGate && planGate.seq > batchSeq && planGate.resolved === 'allow')) {
+      const pending = active.filter((t) => t.status !== 'accepted');
+      this.append(SYSTEM, {
+        type: 'approval.requested',
+        approvalId: newId('appr'),
+        gate: 'plan',
+        summary: `The director proposes ${pending.length} task(s). Approve the plan to let the engineer start.`,
+        detail: pending.map((t, i) => `${i + 1}. ${t.title}`).join('\n'),
+      });
+      return 'applied';
+    }
+    if (active.every((t) => t.status === 'accepted')) {
+      if (milestone?.resolved === 'deny' && milestone.resolvedSeq! > batchSeq) {
+        if (this.pausedAgents.has(director.name)) return 'wait';
+        return this.directorPlanTurn(state); // remedial plan carrying the human's note
+      }
+      this.append(SYSTEM, {
+        type: 'approval.requested',
+        approvalId: newId('appr'),
+        gate: 'acceptance',
+        summary: `All ${active.length} task(s) implemented and approved by the director. Final human acceptance required.`,
+        detail: active.map((t) => `✓ ${t.title}`).join('\n'),
+      });
+      return 'applied';
+    }
+    const inReview = active.find((t) => t.status === 'needs-review');
+    if (inReview) {
+      if (this.pausedAgents.has(director.name)) return 'wait';
+      return this.directorReviewTurn(state, inReview);
+    }
+    const runnable = active.find(
+      (t) =>
+        (t.status === 'pending' || t.status === 'in-progress') &&
+        t.dependsOn.every((id) => state.tasks.get(id)?.status === 'accepted'),
+    );
+    if (!runnable) return 'wait';
+    if (this.pausedAgents.has(engineer.name)) return 'wait';
+    return this.engineerTurn(state, runnable);
+  }
+
+  private async directorPlanTurn(state: RunState): Promise<StepResult> {
+    const director = this.config.reviewer;
+    const batchSeq = this.lastTaskCreatedSeq();
+    const humanNote = this.newestDenyNoteAfter(batchSeq);
+    const accepted = [...state.tasks.values()].filter((t) => t.status === 'accepted');
+    const newDirectives = pendingDirectivesFor(state, director.name);
+    const prompt = directorPlanPrompt({
+      goal: currentGoal(state),
+      criteria: this.config.criteria,
+      engineerName: this.config.driver.name,
+      standingDirectives: this.standingFor(state, director.name, newDirectives),
+      newDirectives,
+      humanNote,
+      acceptedTasks: accepted.map((t) => t.title),
+      recovery: this.recoveryTextFor(director.name),
+    });
+    const { result, reply } = await this.executeTurn(director.name, prompt, newDirectives.map((d) => d.directiveId));
+    if (result.outcome !== 'ok') return result.outcome;
+
+    const plan: any[] = Array.isArray(reply.json?.plan) ? reply.json.plan : [];
+    const items = plan
+      .filter((p) => p && typeof p.title === 'string')
+      .slice(0, 8)
+      .map((p) => ({
+        title: String(p.title).slice(0, 120),
+        description: String(p.description ?? ''),
+        criteria: Array.isArray(p.criteria) ? p.criteria.map(String) : [],
+        dependsOn: Array.isArray(p.dependsOn) ? p.dependsOn.map(Number).filter((n: number) => Number.isInteger(n) && n >= 0) : [],
+      }));
+    if (!items.length) {
+      this.append(SYSTEM, { type: 'error', scope: 'plan', message: 'director produced no parseable plan; retrying next cycle' });
+      return 'error';
+    }
+    const ids = items.map(() => newId('task'));
+    items.forEach((p, i) => {
+      this.append(
+        { kind: 'agent', agent: director.name },
+        {
+          type: 'task.created',
+          taskId: ids[i]!,
+          title: p.title,
+          description: p.description,
+          criteria: p.criteria,
+          assignee: this.config.driver.name,
+          dependsOn: p.dependsOn.filter((n: number) => n < i).map((n: number) => ids[n]!),
+        },
+      );
+    });
+    this.append(
+      { kind: 'agent', agent: director.name },
+      {
+        type: 'message',
+        messageId: newId('msg'),
+        from: director.name,
+        to: 'human',
+        kind: 'handoff',
+        text: result.finalText,
+      },
+    );
+    return 'ok'; // next cycle requests the plan gate
+  }
+
+  private async engineerTurn(state: RunState, task: TaskState): Promise<StepResult> {
+    const engineer = this.config.driver;
+    const newDirectives = pendingDirectivesFor(state, engineer.name);
+    const objection = this.latestMessageFor(task.taskId, 'objection');
+    const tieBreak = this.newestGate('task', task.taskId);
+    const humanNote =
+      tieBreak?.resolved === 'deny' && tieBreak.resolvedSeq! > this.lastTurnSeq(engineer.name) ? tieBreak.note : undefined;
+    const prompt = engineerTaskPrompt({
+      goal: currentGoal(state),
+      task: { taskId: task.taskId, title: task.title, description: task.description, criteria: task.criteria },
+      directorName: this.config.reviewer.name,
+      standingDirectives: this.standingFor(state, engineer.name, newDirectives),
+      newDirectives,
+      objection: objection && objection.seq > this.lastOkTurnSeq(engineer.name) ? objection.text : undefined,
+      humanNote,
+      recovery: this.recoveryTextFor(engineer.name),
+    });
+    if (task.status === 'pending') {
+      this.append(SYSTEM, { type: 'task.updated', taskId: task.taskId, status: 'in-progress' });
+    }
+    const { result, reply } = await this.executeTurn(engineer.name, prompt, newDirectives.map((d) => d.directiveId));
+    if (result.outcome !== 'ok') return result.outcome;
+
+    const status = reply.json?.status;
+    this.append(
+      { kind: 'agent', agent: engineer.name },
+      {
+        type: 'message',
+        messageId: newId('msg'),
+        from: engineer.name,
+        to: status === 'blocked' ? 'human' : this.config.reviewer.name,
+        kind: status === 'blocked' ? 'question' : 'report',
+        text: result.finalText,
+        taskId: task.taskId,
+      },
+    );
+    if (status === 'blocked') {
+      this.append(SYSTEM, {
+        type: 'run.status',
+        status: 'paused',
+        reason: 'engineer is blocked and asked the human a question; answer with `agentos tell` then resume',
+      });
+      this.runPaused = true;
+      return 'ok';
+    }
+    this.append(SYSTEM, {
+      type: 'task.updated',
+      taskId: task.taskId,
+      status: 'needs-review',
+      note: 'engineer reports done; director review pending',
+    });
+    return 'ok';
+  }
+
+  private async directorReviewTurn(state: RunState, task: TaskState): Promise<StepResult> {
+    const director = this.config.reviewer;
+    const newDirectives = pendingDirectivesFor(state, director.name);
+    const report = this.latestMessageFor(task.taskId, 'report');
+    const round = this.objectionCount(task.taskId) + 1;
+    const prompt = directorReviewPrompt({
+      goal: currentGoal(state),
+      task: { taskId: task.taskId, title: task.title, description: task.description, criteria: task.criteria },
+      engineerName: this.config.driver.name,
+      engineerReport: report?.text ?? '(no report; judge the working tree directly)',
+      round,
+      standingDirectives: this.standingFor(state, director.name, newDirectives),
+      newDirectives,
+      recovery: this.recoveryTextFor(director.name),
+    });
+    const { result, reply } = await this.executeTurn(director.name, prompt, newDirectives.map((d) => d.directiveId));
+    if (result.outcome !== 'ok') return result.outcome;
+
+    const verdict = reply.json?.verdict === 'approve' ? 'approve' : 'objection';
+    this.append(
+      { kind: 'agent', agent: director.name },
+      {
+        type: 'message',
+        messageId: newId('msg'),
+        from: director.name,
+        to: verdict === 'approve' ? 'human' : this.config.driver.name,
+        kind: verdict === 'approve' ? 'verdict' : 'objection',
+        text: result.finalText,
+        taskId: task.taskId,
+      },
+    );
+    if (verdict === 'approve') {
+      this.append(SYSTEM, {
+        type: 'task.updated',
+        taskId: task.taskId,
+        status: 'accepted',
+        note: `director approved in review round ${round}`,
+      });
+    } else if (round >= this.config.maxReviewRounds) {
+      this.append(SYSTEM, {
+        type: 'approval.requested',
+        approvalId: newId('appr'),
+        gate: 'task',
+        taskId: task.taskId,
+        summary: `"${task.title}": director still objects after ${round} rounds. Your call.`,
+        detail: reply.json?.summary ?? result.finalText.slice(0, 2000),
+      });
+    } else {
+      this.append(SYSTEM, {
+        type: 'task.updated',
+        taskId: task.taskId,
+        status: 'in-progress',
+        note: `director objection in round ${round}`,
+      });
+    }
+    return 'ok';
+  }
+
+  // -- team-mode history queries ----------------------------------------------
+
+  private newestGate(
+    gate: 'plan' | 'acceptance' | 'task',
+    taskId?: string,
+  ): { seq: number; approvalId: string; resolved?: 'allow' | 'deny'; resolvedSeq?: number; note?: string } | undefined {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const env = this.history[i]!;
+      const e = env.event;
+      if (e.type === 'approval.requested' && e.gate === gate && (taskId === undefined || e.taskId === taskId)) {
+        const out: { seq: number; approvalId: string; resolved?: 'allow' | 'deny'; resolvedSeq?: number; note?: string } = {
+          seq: env.seq,
+          approvalId: e.approvalId,
+        };
+        for (const env2 of this.history) {
+          const r = env2.event;
+          if (r.type === 'approval.resolved' && r.approvalId === e.approvalId) {
+            out.resolved = r.decision;
+            out.resolvedSeq = env2.seq;
+            out.note = r.note;
+          }
+        }
+        return out;
+      }
+    }
+    return undefined;
+  }
+
+  private lastTaskCreatedSeq(): number {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      if (this.history[i]!.event.type === 'task.created') return this.history[i]!.seq;
+    }
+    return 0;
+  }
+
+  private taskCreatedSeq(taskId: string): number {
+    for (const env of this.history) {
+      if (env.event.type === 'task.created' && env.event.taskId === taskId) return env.seq;
+    }
+    return 0;
+  }
+
+  private lastTaskUpdateSeq(taskId: string): number {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const e = this.history[i]!.event;
+      if (e.type === 'task.updated' && e.taskId === taskId && e.status) return this.history[i]!.seq;
+    }
+    return 0;
+  }
+
+  private newestDenyNoteAfter(seq: number): string | undefined {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const env = this.history[i]!;
+      const e = env.event;
+      if (env.seq <= seq) break;
+      if (e.type === 'approval.resolved' && e.decision === 'deny' && e.note) return e.note;
+    }
+    return undefined;
+  }
+
+  private latestMessageFor(taskId: string, kind: 'report' | 'objection'): { text: string; seq: number } | undefined {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const env = this.history[i]!;
+      const e = env.event;
+      if (e.type === 'message' && e.kind === kind && e.taskId === taskId) return { text: e.text, seq: env.seq };
+    }
+    return undefined;
+  }
+
+  private objectionCount(taskId: string): number {
+    return this.history.filter((env) => {
+      const e = env.event;
+      return e.type === 'message' && e.kind === 'objection' && e.taskId === taskId;
+    }).length;
+  }
+
+  private lastOkTurnSeq(agent: string): number {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const e = this.history[i]!.event;
+      if (e.type === 'turn.completed' && e.agent === agent && e.outcome === 'ok') return this.history[i]!.seq;
+    }
+    return 0;
+  }
+
+  private lastTurnSeq(agent: string): number {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const e = this.history[i]!.event;
+      if (e.type === 'turn.completed' && e.agent === agent) return this.history[i]!.seq;
+    }
+    return 0;
+  }
+
+  private standingFor(state: RunState, agent: string, exclude: { directiveId: string }[]): ReturnType<typeof pendingDirectivesFor> {
+    const excludeIds = new Set(exclude.map((d) => d.directiveId));
+    return [...state.directives.values()].filter(
+      (d) =>
+        !d.superseded &&
+        (d.scope === 'all' || d.scope === agent) &&
+        d.deliveredTo.includes(agent) &&
+        !excludeIds.has(d.directiveId),
+    );
   }
 
   // -- turns -----------------------------------------------------------------

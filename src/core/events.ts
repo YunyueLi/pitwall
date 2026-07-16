@@ -84,6 +84,9 @@ export interface RunCreated {
   type: 'run.created';
   runId: string;
   goal: string;
+  criteria?: string[];
+  /** 'pair': driver/reviewer loop. 'team': director plans, engineer builds. */
+  mode?: 'pair' | 'team';
   repo: string; // absolute path of the target repository
   agents: AgentSpec[];
   agentosVersion: string;
@@ -129,6 +132,7 @@ export interface TaskCreated {
   taskId: string;
   title: string;
   description: string;
+  criteria?: string[];
   assignee: string; // agent name
   dependsOn: string[];
 }
@@ -184,6 +188,7 @@ export interface Message {
   kind: 'report' | 'handoff' | 'objection' | 'question' | 'verdict' | 'info';
   text: string;
   turnId?: string;
+  taskId?: string;
 }
 
 /**
@@ -213,7 +218,9 @@ export interface ApprovalRequested {
   type: 'approval.requested';
   approvalId: string;
   agent?: string;
-  gate: 'tool' | 'acceptance' | 'plan';
+  /** plan: approve the task breakdown; task: tie-break one task; acceptance: final milestone; tool: a risky action. */
+  gate: 'tool' | 'acceptance' | 'plan' | 'task';
+  taskId?: string;
   summary: string;
   detail?: string;
 }

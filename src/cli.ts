@@ -78,7 +78,7 @@ async function main(): Promise<void> {
 
 // ---------------------------------------------------------------------------
 
-function agentSpec(kind: string, role: 'driver' | 'reviewer', model?: string): AgentSpec {
+function agentSpec(kind: string, seat: 'driver' | 'reviewer', role: string, model?: string): AgentSpec {
   if (kind !== 'claude-code' && kind !== 'codex') {
     throw new Error(`unknown adapter "${kind}" (use claude-code or codex)`);
   }
@@ -88,7 +88,7 @@ function agentSpec(kind: string, role: 'driver' | 'reviewer', model?: string): A
     adapter: kind,
     role,
     model,
-    sandbox: role === 'driver' ? 'workspace-write' : 'read-only',
+    sandbox: seat === 'driver' ? 'workspace-write' : 'read-only',
   };
 }
 
@@ -99,8 +99,9 @@ async function cmdRun(argv: string[]): Promise<void> {
       repo: { type: 'string' },
       goal: { type: 'string' },
       criteria: { type: 'string', multiple: true },
-      driver: { type: 'string', default: 'claude-code' },
-      reviewer: { type: 'string', default: 'codex' },
+      mode: { type: 'string', default: 'pair' },
+      driver: { type: 'string' },
+      reviewer: { type: 'string' },
       'driver-model': { type: 'string' },
       'reviewer-model': { type: 'string' },
       'max-rounds': { type: 'string', default: '3' },
@@ -109,17 +110,23 @@ async function cmdRun(argv: string[]): Promise<void> {
     },
   });
   if (!values.goal) throw new Error('--goal is required');
+  if (values.mode !== 'pair' && values.mode !== 'team') throw new Error('--mode must be pair or team');
+  const mode = values.mode as 'pair' | 'team';
   const repo = resolve(values.repo ?? process.cwd());
-  const driver = agentSpec(values.driver!, 'driver', values['driver-model']);
-  const reviewer = agentSpec(values.reviewer!, 'reviewer', values['reviewer-model']);
+  // team default: claude directs (plans/reviews, read-only), codex engineers.
+  const driverKind = values.driver ?? (mode === 'team' ? 'codex' : 'claude-code');
+  const reviewerKind = values.reviewer ?? (mode === 'team' ? 'claude-code' : 'codex');
+  const driver = agentSpec(driverKind, 'driver', mode === 'team' ? 'engineer' : 'driver', values['driver-model']);
+  const reviewer = agentSpec(reviewerKind, 'reviewer', mode === 'team' ? 'director' : 'reviewer', values['reviewer-model']);
   if (driver.name === reviewer.name) {
-    driver.name = `${driver.name}-driver`;
-    reviewer.name = `${reviewer.name}-reviewer`;
+    driver.name = `${driver.name}-${driver.role}`;
+    reviewer.name = `${reviewer.name}-${reviewer.role}`;
   }
   const config: RunConfig = {
     goal: values.goal,
     criteria: values.criteria ?? [],
     repo,
+    mode,
     driver,
     reviewer,
     maxReviewRounds: Number(values['max-rounds']),

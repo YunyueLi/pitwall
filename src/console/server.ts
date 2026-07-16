@@ -124,6 +124,7 @@ function serializeState(orch: Orchestrator): unknown {
   return {
     runId: s.runId,
     repo: s.repo,
+    mode: orch.mode(),
     status: s.status,
     statusReason: s.statusReason,
     goal: s.goalHistory[s.goalHistory.length - 1]?.text ?? '',
