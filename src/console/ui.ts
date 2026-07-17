@@ -7,7 +7,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23888' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='%23888'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #FAF9F7; --surface: #FFFFFF; --raise: #FFFFFF;
+    --bg: #FAF9F7; --panel: #F0EFEB; --surface: #FFFFFF; --raise: #FFFFFF;
     --ink: #37352F; --ink2: rgba(55,53,47,.62); --ink3: rgba(55,53,47,.40);
     --line: rgba(55,53,47,.085); --line2: rgba(55,53,47,.15); --hair: rgba(55,53,47,.06);
     --fill: rgba(55,53,47,.045); --fill2: rgba(55,53,47,.08);
@@ -23,7 +23,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #191918; --surface: #201F1E; --raise: #262523;
+      --bg: #1B1B1A; --panel: #141413; --surface: #232221; --raise: #2A2927;
       --ink: rgba(255,255,255,.83); --ink2: rgba(255,255,255,.55); --ink3: rgba(255,255,255,.36);
       --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.15); --hair: rgba(255,255,255,.06);
       --fill: rgba(255,255,255,.05); --fill2: rgba(255,255,255,.09);
@@ -36,7 +36,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     }
   }
   :root[data-theme="dark"] {
-    --bg: #191918; --surface: #201F1E; --raise: #262523;
+    --bg: #1B1B1A; --panel: #141413; --surface: #232221; --raise: #2A2927;
     --ink: rgba(255,255,255,.83); --ink2: rgba(255,255,255,.55); --ink3: rgba(255,255,255,.36);
     --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.15); --hair: rgba(255,255,255,.06);
     --fill: rgba(255,255,255,.05); --fill2: rgba(255,255,255,.09);
@@ -93,7 +93,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   /* ---------------- sidebar: run workspace ---------------- */
   .side { position: fixed; top: 46px; bottom: 0; left: 0; width: 240px; overflow-y: auto; overscroll-behavior: contain;
-    border-right: 1px solid var(--hair); padding: 10px 8px 12px; background: var(--bg);
+    border-right: 1px solid var(--line); padding: 10px 8px 12px; background: var(--panel);
     display: flex; flex-direction: column; z-index: 40; }
   .newrun { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; border-radius: 9px; color: var(--ink2); font-size: 13px; transition: background .12s var(--ease); margin-bottom: 6px; }
   .newrun:hover { background: var(--fill2); color: var(--ink); }
@@ -118,7 +118,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   /* ---------------- layout frame ---------------- */
   .main { margin: 46px 320px 0 240px; min-height: calc(100dvh - 46px); }
   .rail { position: fixed; top: 46px; bottom: 0; right: 0; width: 320px; overflow-y: auto; overscroll-behavior: contain;
-    border-left: 1px solid var(--hair); padding: 20px 18px 40px; background: var(--bg); z-index: 40; }
+    border-left: 1px solid var(--line); padding: 20px 18px 40px; background: var(--panel); z-index: 40; }
   @media (max-width: 1180px) {
     .main { margin-right: 0; }
     .rail { transform: translateX(100%); transition: transform .3s var(--ease); box-shadow: none; width: 340px; }
