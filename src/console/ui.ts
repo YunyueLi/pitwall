@@ -87,14 +87,15 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .icobtn { width: 30px; height: 30px; padding: 0; font-size: 14px; }
   .runid { font: 11px var(--mono); color: var(--ink3); }
   @media (max-width: 760px) { .runid, .crumb { display: none; } }
-  .menubtn, .railbtn { display: none; }
+  .railbtn { display: none; }
   @media (max-width: 1180px) { .railbtn { display: inline-flex; } }
-  @media (max-width: 1000px) { .menubtn { display: inline-flex; } }
+  .sidetoggle svg { width: 16px; height: 16px; transition: transform .2s var(--ease); }
+  body.side-collapsed .sidetoggle svg { transform: scaleX(-1); }
 
   /* ---------------- sidebar: run workspace ---------------- */
   .side { position: fixed; top: 46px; bottom: 0; left: 0; width: 240px; overflow-y: auto; overscroll-behavior: contain;
     border-right: 1px solid var(--line); padding: 10px 8px 12px; background: var(--panel);
-    display: flex; flex-direction: column; z-index: 40; }
+    display: flex; flex-direction: column; z-index: 41; transition: transform .26s var(--ease), box-shadow .26s var(--ease); }
   .newrun { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; border-radius: 9px; color: var(--ink2); font-size: 13px; transition: background .12s var(--ease); margin-bottom: 6px; }
   .newrun:hover { background: var(--fill2); color: var(--ink); }
   .newrun svg { width: 15px; height: 15px; }
@@ -116,18 +117,31 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .side .foot a:hover { color: var(--ink); }
 
   /* ---------------- layout frame ---------------- */
-  .main { margin: 46px 320px 0 240px; min-height: calc(100dvh - 46px); }
+  .main { margin: 46px 320px 0 240px; min-height: calc(100dvh - 46px); transition: margin-left .26s var(--ease), margin-right .26s var(--ease); }
   .rail { position: fixed; top: 46px; bottom: 0; right: 0; width: 320px; overflow-y: auto; overscroll-behavior: contain;
     border-left: 1px solid var(--line); padding: 20px 18px 40px; background: var(--panel); z-index: 40; }
+  /* left-edge hot-zone reveals the collapsed sidebar as a floating peek */
+  .edge { display: none; position: fixed; left: 0; top: 46px; bottom: 0; width: 14px; z-index: 39; }
+
+  /* desktop: user-collapsible sidebar with edge-peek */
+  @media (min-width: 1001px) {
+    body.side-collapsed .side { transform: translateX(-101%); box-shadow: none; }
+    body.side-collapsed .main { margin-left: 0; }
+    body.side-collapsed .composer { left: 0; }
+    body.side-collapsed .edge { display: block; }
+    body.side-collapsed .side.peek { transform: none; box-shadow: 10px 0 60px -12px rgba(15,15,15,.28); border-radius: 0 12px 12px 0; }
+  }
+
   @media (max-width: 1180px) {
     .main { margin-right: 0; }
-    .rail { transform: translateX(100%); transition: transform .3s var(--ease); box-shadow: none; width: 340px; }
-    .rail.open { transform: none; box-shadow: -8px 0 50px rgba(0,0,0,.16); }
+    .rail { transform: translateX(100%); transition: transform .28s var(--ease), box-shadow .28s var(--ease); box-shadow: none; width: 340px; }
+    .rail.open { transform: none; box-shadow: -10px 0 60px -12px rgba(15,15,15,.28); }
   }
   @media (max-width: 1000px) {
-    .side { transform: translateX(-100%); transition: transform .3s var(--ease); }
-    .side.open { transform: none; box-shadow: 8px 0 50px rgba(0,0,0,.16); }
+    .side { transform: translateX(-101%); }
+    .side.open { transform: none; box-shadow: 10px 0 60px -12px rgba(15,15,15,.28); }
     .main { margin-left: 0; }
+    .composer { left: 0; }
   }
 
   /* ---------------- document column ---------------- */
@@ -281,7 +295,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .frow .fp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
 
   /* ---------------- composer ---------------- */
-  .composer { position: fixed; left: 240px; right: 320px; bottom: 0; z-index: 45; padding: 14px 16px 20px; background: linear-gradient(180deg, transparent, var(--bg) 42%); pointer-events: none; }
+  .composer { position: fixed; left: 240px; right: 320px; bottom: 0; z-index: 45; padding: 14px 16px 20px; background: linear-gradient(180deg, transparent, var(--bg) 42%); pointer-events: none; transition: left .26s var(--ease), right .26s var(--ease); }
   @media (max-width: 1180px) { .composer { right: 0; } }
   @media (max-width: 1000px) { .composer { left: 0; } }
   .composer .wrap { max-width: 720px; margin: 0 auto; padding: 0 32px; }
@@ -313,7 +327,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <button class="hbtn icobtn menubtn" id="menuBtn" title="Runs">☰</button>
+  <button class="hbtn icobtn sidetoggle" id="menuBtn" title="Toggle sidebar (⌘\)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/></svg></button>
   <div class="brand"><span class="mark"></span>Pitwall</div>
   <span class="crumb" id="crumb"></span>
   <span class="sp"></span>
@@ -324,6 +338,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   <button class="hbtn icobtn railbtn" id="railBtn" title="Panel">⊞</button>
 </header>
 
+<div class="edge" id="edge"></div>
 <aside class="side" id="side">
   <button class="newrun" id="newRun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span id="newRunLabel"></span></button>
   <div id="runlist"></div>
@@ -620,7 +635,21 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     if (urlLang) q += '&lang=' + urlLang;
     location.href = '/' + q;
   });
-  el('menuBtn').addEventListener('click', function () { el('side').classList.toggle('open'); });
+  function toggleSidebar() {
+    if (window.innerWidth <= 1000) {
+      el('side').classList.toggle('open');
+      return;
+    }
+    var collapsed = document.body.classList.toggle('side-collapsed');
+    localStorage.setItem('pitwall-side', collapsed ? '1' : '0');
+    if (!collapsed) el('side').classList.remove('peek');
+  }
+  el('menuBtn').addEventListener('click', toggleSidebar);
+  el('edge').addEventListener('mouseenter', function () { el('side').classList.add('peek'); });
+  el('side').addEventListener('mouseleave', function () { if (document.body.classList.contains('side-collapsed')) el('side').classList.remove('peek'); });
+  document.addEventListener('keydown', function (ev) {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key === '\\') { ev.preventDefault(); toggleSidebar(); }
+  });
   el('railBtn').addEventListener('click', function () { el('rail').classList.toggle('open'); });
   el('newRun').addEventListener('click', function () {
     var cmd = 'pitwall run --repo <path> --goal "…" --criteria "…"';
@@ -1040,6 +1069,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
 
   applyTheme();
+  var sideParam = new URLSearchParams(location.search).get('side');
+  if (sideParam === 'collapsed' || (sideParam !== 'expanded' && localStorage.getItem('pitwall-side') === '1')) document.body.classList.add('side-collapsed');
   applyStatic();
   loadRuns();
   setInterval(loadRuns, 30000);
