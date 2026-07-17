@@ -1,17 +1,24 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync, unwatchFile, watchFile } from 'node:fs';
 import { join } from 'node:path';
 import type { Orchestrator } from '../orchestrator/orchestrator.js';
-import { layerOf } from '../core/events.js';
-import { writeControl } from '../core/store.js';
+import { layerOf, type Envelope } from '../core/events.js';
+import { readLedgerFile } from '../core/ledger.js';
+import { reduce } from '../core/state.js';
+import { listRuns, readControl, runDir, writeControl } from '../core/store.js';
 import { UI_HTML } from './ui.js';
 
 /**
  * The control server is both the console backend and the IPC surface the CLI
  * talks to. It binds to 127.0.0.1 only: the ledger contains prompts, diffs
  * and repo paths, none of which belong on the network by default.
+ *
+ * One server can show every run on the machine: its own live run read-write,
+ * any other via `?run=` — served read-only straight from that run's ledger
+ * file, tailed live even if a different process is writing it.
  */
 export interface ConsoleBackend {
+  runId: string;
   dir: string;
   state(): ReturnType<Orchestrator['state']>;
   events(): ReturnType<Orchestrator['events']>;
@@ -28,6 +35,57 @@ export interface ConsoleBackend {
   stop?(): Promise<void>;
 }
 
+/** Read-only backend over a ledger file; tails appends from other processes. */
+export function ledgerBackend(runId: string): ConsoleBackend {
+  const dir = runDir(runId);
+  const path = join(dir, 'events.jsonl');
+  let history = readLedgerFile(path);
+  let size = fileSize(path);
+  const refresh = () => {
+    const now = fileSize(path);
+    if (now !== size) {
+      size = now;
+      history = readLedgerFile(path);
+    }
+  };
+  const created = () => {
+    const e = history.find((x) => x.event.type === 'run.created')?.event;
+    return e && e.type === 'run.created' ? e : undefined;
+  };
+  return {
+    runId,
+    dir,
+    readonly: true,
+    state: () => {
+      refresh();
+      return reduce(history);
+    },
+    events: () => {
+      refresh();
+      return history;
+    },
+    criteria: () => created()?.criteria ?? [],
+    mode: () => created()?.mode ?? 'pair',
+    subscribe: (fn) => {
+      let sent = history.length;
+      const listener = () => {
+        refresh();
+        for (; sent < history.length; sent++) fn(history[sent]!);
+      };
+      watchFile(path, { interval: 700 }, listener);
+      return () => unwatchFile(path, listener);
+    },
+  };
+}
+
+function fileSize(path: string): number {
+  try {
+    return statSync(path).size;
+  } catch {
+    return -1;
+  }
+}
+
 export function startControlServer(orch: ConsoleBackend, preferredPort = 0): Promise<{ server: Server; port: number }> {
   const server = createServer((req, res) => handle(orch, req, res));
   return new Promise((resolve, reject) => {
@@ -42,11 +100,33 @@ export function startControlServer(orch: ConsoleBackend, preferredPort = 0): Pro
   });
 }
 
-async function handle(orch: ConsoleBackend, req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handle(primary: ConsoleBackend, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
   try {
+    const runParam = url.searchParams.get('run');
+    const isPrimary = !runParam || runParam === primary.runId;
+    const orch: ConsoleBackend = isPrimary ? primary : ledgerBackend(runParam!);
+
     if (req.method === 'GET' && url.pathname === '/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(UI_HTML);
+      return;
+    }
+    if (req.method === 'GET' && url.pathname === '/api/runs') {
+      json(res, 200, listRuns().map((r) => {
+        const b = ledgerBackend(r.runId);
+        const s = b.state();
+        const live = readControl(runDir(r.runId));
+        return {
+          runId: r.runId,
+          createdAt: r.createdAt,
+          repo: r.repo,
+          goal: s.goalHistory[s.goalHistory.length - 1]?.text ?? '',
+          status: s.status,
+          mode: b.mode(),
+          live: !!live,
+          current: r.runId === primary.runId,
+        };
+      }));
       return;
     }
     if (req.method === 'GET' && url.pathname === '/api/state') {
@@ -65,10 +145,11 @@ async function handle(orch: ConsoleBackend, req: IncomingMessage, res: ServerRes
         connection: 'keep-alive',
       });
       const since = Number(url.searchParams.get('since') ?? 0);
+      const send = (env: Envelope) => res.write(`data: ${JSON.stringify(env)}\n\n`);
       for (const env of orch.events()) {
-        if (env.seq > since) res.write(`data: ${JSON.stringify(env)}\n\n`);
+        if (env.seq > since) send(env);
       }
-      const un = orch.subscribe((env) => res.write(`data: ${JSON.stringify(env)}\n\n`));
+      const un = orch.subscribe(send);
       const ping = setInterval(() => res.write(': ping\n\n'), 15000);
       req.on('close', () => {
         clearInterval(ping);
@@ -95,7 +176,12 @@ async function handle(orch: ConsoleBackend, req: IncomingMessage, res: ServerRes
 
     if (req.method === 'POST') {
       if (orch.readonly) {
-        json(res, 403, { error: 'read-only console: the run is not live (use `agentos resume` to drive it)' });
+        const live = readControl(orch.dir);
+        json(res, 403, {
+          error: live
+            ? `this run is driven by another process (console at http://127.0.0.1:${live.port}/)`
+            : 'read-only: the run is not live (use `pitwall resume` to drive it)',
+        });
         return;
       }
       const body = await readBody(req);
@@ -149,6 +235,7 @@ function serializeState(orch: ConsoleBackend): unknown {
     runId: s.runId,
     repo: s.repo,
     mode: orch.mode(),
+    readonly: !!orch.readonly,
     startedTs: events[0]?.ts,
     lastTs: events[events.length - 1]?.ts,
     status: s.status,

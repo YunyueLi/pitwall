@@ -1,6 +1,6 @@
 # The validated demo run
 
-This is a record of the first end-to-end validation run (2026-07-16, AgentOS
+This is a record of the first end-to-end validation run (2026-07-16, Pitwall
 0.1.0, Claude Code 2.1.210, codex-cli 0.144.4). The complete raw ledger is in
 [`sample-run-events.jsonl`](sample-run-events.jsonl) — 67 events, every
 timestamp system-generated. What happened, in order:
@@ -14,8 +14,8 @@ timestamp system-generated. What happened, in order:
 | 16:35:xx | Driver reports: *"The prior turn's work was already complete and matches the new human directive — no repeat work needed."* Task → `needs-review`. |
 | 16:36:xx | Reviewer turn starts; the same directive is delivered and acked for `codex`. Codex inspects the working tree read-only (git diff, runs tests). |
 | 16:39:xx | Codex verdict: **approve**, addressing each completion criterion. Acceptance gate opens — *reviewer approval is not acceptance*. |
-| 16:40:xx | **`kill -9` on the orchestrator** while the gate is pending. `agentos status` still answers correctly from the ledger (offline mode). |
-| 16:41:xx | `agentos resume`: state rebuilt from the ledger, native sessions reattached, gate still pending, console back up. |
+| 16:40:xx | **`kill -9` on the orchestrator** while the gate is pending. `pitwall status` still answers correctly from the ledger (offline mode). |
+| 16:41:xx | `pitwall resume`: state rebuilt from the ledger, native sessions reattached, gate still pending, console back up. |
 | 16:42:xx | **Human rejects** the gate with a note: also document `median()` in README. Task → `in-progress` with the note attached as a human instruction. |
 | 16:44:xx | Driver (same vendor session, resumed) documents README, re-runs tests, hands off. Reviewer re-audits: **approve, round 2**. |
 | 16:47:xx | Human approves. Task → `accepted`, run → `done`. Orchestrator exits 0. |
@@ -43,7 +43,7 @@ To reproduce:
 
 ```bash
 ./examples/create-demo-repo.sh /tmp/demo-repo
-node bin/agentos.js run --repo /tmp/demo-repo \
+node bin/pitwall.js run --repo /tmp/demo-repo \
   --goal "Add a median(values) function to src/stats.js, exported alongside sum and mean, and cover it with tests." \
   --criteria "median is exported and returns the middle value for odd-length arrays" \
   --criteria "npm test passes" \

@@ -1,5 +1,5 @@
 {
-  "name": "agentos",
+  "name": "pitwall",
   "version": "0.1.0",
   "description": "A local-first control plane for heterogeneous coding agents collaborating on one repository — one authoritative ledger, one console, recoverable by design.",
   "type": "module",
@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "bin": {
-    "agentos": "./bin/agentos.js"
+    "pitwall": "./bin/pitwall.js"
   },
   "scripts": {
     "build": "tsc",

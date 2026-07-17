@@ -17,16 +17,21 @@ import type { Envelope } from './events.js';
 import { newId } from './ids.js';
 
 /**
- * Run storage lives outside the target repository (default ~/.agentos/runs)
+ * Run storage lives outside the target repository (default ~/.pitwall/runs)
  * so the ledger never dirties the codebase agents are working on, and agents
  * cannot casually rewrite their own audit trail.
  */
-export function agentosHome(): string {
-  return process.env.AGENTOS_HOME || join(homedir(), '.agentos');
+export function pitwallHome(): string {
+  if (process.env.PITWALL_HOME) return process.env.PITWALL_HOME;
+  if (process.env.AGENTOS_HOME) return process.env.AGENTOS_HOME; // legacy name
+  const home = join(homedir(), '.pitwall');
+  const legacy = join(homedir(), '.agentos');
+  if (!existsSync(home) && existsSync(legacy)) return legacy; // pre-rename data
+  return home;
 }
 
 export function runsDir(): string {
-  return join(agentosHome(), 'runs');
+  return join(pitwallHome(), 'runs');
 }
 
 export function runDir(runId: string): string {
@@ -139,7 +144,7 @@ export class RawLog {
 
 export function openRun(dirPath: string): { ledger: Ledger; history: Envelope[] } {
   if (!existsSync(join(dirPath, 'meta.json'))) {
-    throw new Error(`${dirPath} is not an AgentOS run directory`);
+    throw new Error(`${dirPath} is not an Pitwall run directory`);
   }
   return Ledger.open(dirPath);
 }

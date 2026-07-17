@@ -1,5 +1,5 @@
 /**
- * The AgentOS console — one self-contained page, zero external assets.
+ * The Pitwall console — one self-contained page, zero external assets.
  *
  * Design: paper-minimal (Notion/Manus lineage). Light by default, dark via
  * prefers-color-scheme. One centered reading column; the agents' dialogue is
@@ -14,7 +14,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AgentOS</title>
+<title>Pitwall</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23888' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='%23888'/%3E%3C/svg%3E">
 <style>
   :root {
@@ -38,6 +38,33 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   ::selection { background: rgba(110,110,220,.18); }
   a { color: inherit; }
   button { font: inherit; cursor: pointer; background: none; border: none; color: inherit; padding: 0; }
+
+  /* ---------- sidebar ---------- */
+  .side { position: fixed; top: 52px; bottom: 0; left: 0; width: 240px; overflow-y: auto;
+    border-right: 1px solid var(--line); padding: 16px 10px 12px; background: var(--bg);
+    display: flex; flex-direction: column; z-index: 30; }
+  .side .sh { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink3); font-weight: 650; padding: 0 8px 10px; }
+  .runrow { display: block; width: 100%; text-align: left; padding: 8px 9px; border-radius: 9px; margin-bottom: 2px;
+    transition: background .25s var(--ease); }
+  .runrow:hover { background: var(--line); }
+  .runrow.cur { background: var(--line); }
+  .runrow .g { font-size: 12.5px; line-height: 1.45; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .runrow.done-run .g { color: var(--ink2); }
+  .runrow .m { display: flex; align-items: center; gap: 6px; margin-top: 4px; font: 10.5px var(--mono); color: var(--ink3); }
+  .side .foot { margin-top: auto; padding: 12px 8px 4px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink2);
+    display: flex; align-items: center; gap: 8px; }
+  .side .foot .idot { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--bg);
+    display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 650; }
+  .side .foot a { color: var(--ink3); text-decoration: none; margin-left: auto; font-size: 11px; }
+  .side .foot a:hover { color: var(--ink); }
+  .main { margin-left: 240px; }
+  @media (max-width: 1000px) {
+    .side { transform: translateX(-100%); transition: transform .35s var(--ease); }
+    .side.open { transform: none; box-shadow: 0 0 60px rgba(0,0,0,.15); }
+    .main { margin-left: 0; }
+  }
+  .menubtn { display: none; }
+  @media (max-width: 1000px) { .menubtn { display: inline-flex; } }
 
   /* ---------- header ---------- */
   header {
@@ -183,8 +210,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .steps .row .fb { border: 1px solid var(--line2); border-radius: 5px; padding: 0 6px; margin-right: 4px; }
 
   /* ---------- composer ---------- */
-  .composer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px 22px;
+  .composer { position: fixed; left: 240px; right: 0; bottom: 0; z-index: 40; padding: 12px 16px 22px;
     background: linear-gradient(180deg, transparent, var(--bg) 38%); pointer-events: none; }
+  @media (max-width: 1000px) { .composer { left: 0; } }
   .composer .box { pointer-events: auto; max-width: 720px; margin: 0 auto; background: var(--surface);
     border: 1px solid var(--line2); border-radius: 16px; padding: 12px 14px 10px;
     box-shadow: 0 12px 40px -18px rgba(0,0,0,.18); transition: border-color .3s var(--ease); }
@@ -206,7 +234,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 </head>
 <body>
 <header>
-  <div class="brand"><span class="mark"></span>AgentOS</div>
+  <button class="hbtn menubtn" id="menuBtn">☰</button>
+  <div class="brand"><span class="mark"></span>Pitwall</div>
   <span class="hstatus"><span class="dot" id="hdot"></span><span id="hstatus"></span></span>
   <span class="sp"></span>
   <span class="runid" id="runid"></span>
@@ -214,6 +243,16 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   <button class="hbtn" id="pauseBtn"></button>
 </header>
 
+<aside class="side" id="side">
+  <div class="sh" id="secRuns"></div>
+  <div id="runlist"></div>
+  <div class="foot">
+    <span class="idot" id="ilabel">你</span><span id="identity"></span>
+    <a href="https://github.com/YunyueLi/pitwall" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</aside>
+
+<div class="main">
 <div class="doc">
   <p class="kicker" id="kicker"></p>
   <h1 class="title" id="goal"></h1>
@@ -230,6 +269,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     <div class="h"><span id="secRoom"></span><span style="flex:1"></span><button class="hbtn" id="noiseChip" style="font-size:11.5px; text-transform:none; letter-spacing:0"></button></div>
     <div class="conv" id="conv"></div>
   </div>
+</div>
 </div>
 
 <div class="composer">
@@ -287,7 +327,10 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     'delivery receipt': '送达回执', 'received directive': '已收到指令',
     'starts a turn': '开始新一轮', 'finished': '完成本轮', 'registered': '注册',
     'accepted by human': '人类已验收', 'cost': '花费', 'Raw': '原始输出', 'Interrupt': '打断',
-    'run': '运行', 'status': '状态'
+    'run': '运行', 'status': '状态',
+    'Runs': '运行', 'Local · you': '本地 · 你', 'live': '在线',
+    'This run is read-only here — it is not driven by this process.': '当前为只读视图——该运行不由本进程驱动。',
+    'just now': '刚刚', 'm ago': ' 分钟前', 'h ago': ' 小时前', 'd ago': ' 天前'
   };
   var SYS = [
     [/^The director proposes (\d+) task\(s\)\. Approve the plan to let the engineer start\.$/, '总监提出 $1 个任务的计划，批准后工程师开工。'],
@@ -319,7 +362,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   ];
   var urlLang = new URLSearchParams(location.search).get('lang');
   var lang = (urlLang === 'zh' || urlLang === 'en') ? urlLang
-    : localStorage.getItem('agentos-lang') || (((navigator.language || '').toLowerCase().indexOf('zh') === 0) ? 'zh' : 'en');
+    : localStorage.getItem('pitwall-lang') || (((navigator.language || '').toLowerCase().indexOf('zh') === 0) ? 'zh' : 'en');
+  var RUN = new URLSearchParams(location.search).get('run');
+  function api(p) {
+    if (!RUN) return p;
+    return p + (p.indexOf('?') >= 0 ? '&' : '?') + 'run=' + encodeURIComponent(RUN);
+  }
   function t(s) { if (lang === 'zh' && ZH[s]) return ZH[s]; return s; }
   function tSys(s) {
     if (lang !== 'zh') return s;
@@ -334,7 +382,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     });
   }
   function post(path, body) {
-    return fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    return fetch(api(path), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json(); })
       .then(function (d) { if (d && d.error) alert(d.error); return d; });
   }
@@ -350,7 +398,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
 
   // ------------------------------------------------------------ markdown-lite
-  var FENCE_AGENTOS = new RegExp(BT + BT + BT + 'agentos\\s*\\n([\\s\\S]*?)' + BT + BT + BT, 'g');
+  var FENCE_AGENTOS = new RegExp(BT + BT + BT + '(?:pitwall|agentos)\\s*\\n([\\s\\S]*?)' + BT + BT + BT, 'g');
   var FENCE = new RegExp(BT + BT + BT + '([a-zA-Z]*)\\n?([\\s\\S]*?)' + BT + BT + BT, 'g');
   var INLINE = new RegExp(BT + '([^' + BT + '\\n]+)' + BT, 'g');
   function stripStructured(text) {
@@ -400,12 +448,45 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     el('langBtn').textContent = lang === 'zh' ? 'EN' : '中文';
     el('secTasks').textContent = t('Tasks');
     el('secRoom').textContent = t('The room');
+    el('secRuns').textContent = t('Runs');
+    el('identity').textContent = t('Local · you');
+    el('ilabel').textContent = lang === 'zh' ? '你' : 'U';
     el('noiseChip').textContent = t(showNoise ? 'hide steps' : 'show steps');
     el('dirText').placeholder = t('Add guidance, change direction, or overrule…');
     el('dirHint').textContent = t(interrupt ? 'Aborts the current turn and re-delivers immediately.' : 'Lands at the next turn boundary, with a delivery receipt.');
     el('intChip').textContent = t('interrupt');
     renderModeChip();
   }
+
+  // ------------------------------------------------------------ sidebar
+  function ago(iso) {
+    var m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (m < 1) return t('just now');
+    if (m < 60) return m + t('m ago');
+    if (m < 1440) return Math.round(m / 60) + t('h ago');
+    return Math.round(m / 1440) + t('d ago');
+  }
+  function renderRuns(list) {
+    var curId = state ? state.runId : RUN;
+    setHtml('runlist', list.map(function (r) {
+      var dot = r.live && r.status === 'running' ? 'running' : r.status;
+      var extra = r.live && r.status === 'running' ? ' · ' + t('live') : '';
+      return '<button class="runrow' + (r.runId === curId ? ' cur' : '') + (r.status === 'done' ? ' done-run' : '') + '" data-run="' + esc(r.runId) + '">'
+        + '<span class="g">' + esc(r.goal || r.runId) + '</span>'
+        + '<span class="m"><span class="dot ' + dot + '"></span>' + esc(t(r.status)) + extra + ' · ' + esc(ago(r.createdAt)) + '</span>'
+        + '</button>';
+    }).join(''));
+  }
+  function loadRuns() {
+    fetch('/api/runs').then(function (r) { return r.json(); }).then(renderRuns).catch(function () {});
+  }
+  el('runlist').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.runrow'); if (!b) return;
+    var q = '?run=' + encodeURIComponent(b.getAttribute('data-run'));
+    if (urlLang) q += '&lang=' + urlLang;
+    location.href = '/' + q;
+  });
+  el('menuBtn').addEventListener('click', function () { el('side').classList.toggle('open'); });
 
   // ------------------------------------------------------------ header/meta
   function renderTop(s) {
@@ -418,7 +499,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     el('hstatus').textContent = t(s.status) + ' · ' + t(s.mode);
     el('runid').textContent = s.runId;
     el('pauseBtn').textContent = t(s.status === 'paused' ? 'Resume' : 'Pause');
-    document.title = 'AgentOS — ' + t(s.status);
+    el('pauseBtn').style.display = s.readonly ? 'none' : '';
+    if (s.readonly) {
+      el('dirHint').textContent = t('This run is read-only here — it is not driven by this process.');
+      el('sendBtn').style.opacity = '.4';
+    }
+    document.title = 'Pitwall — ' + t(s.status);
 
     var kick = s.status === 'done' ? t('RUN COMPLETE') : pend.length ? t('NEEDS YOU') : s.status === 'paused' ? t('PAUSED') : t('LIVE');
     var kdot = working.length && s.status === 'running' ? '<span class="dot running"></span>' : '';
@@ -696,7 +782,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       if (act === 'unpause') post('/api/agent-pause', { agent: agent, paused: false });
       if (act === 'interrupt') post('/api/agent-pause', { agent: agent, paused: true, interrupt: true });
       if (act === 'raw') {
-        fetch('/api/raw/' + encodeURIComponent(agent) + '?n=300').then(function (r) { return r.json(); }).then(function (d) {
+        fetch(api('/api/raw/' + encodeURIComponent(agent) + '?n=300')).then(function (r) { return r.json(); }).then(function (d) {
           var w = window.open('', '_blank');
           w.document.write('<title>raw · ' + esc(agent) + '</title><body style="background:#1b1b1a;color:#d5d5d0;margin:0"><pre style="white-space:pre-wrap;font:11px/1.6 monospace;padding:18px">' + d.lines.map(esc).join('\n') + '</pre>');
         });
@@ -751,7 +837,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   });
   el('langBtn').addEventListener('click', function () {
     lang = lang === 'zh' ? 'en' : 'zh';
-    localStorage.setItem('agentos-lang', lang);
+    localStorage.setItem('pitwall-lang', lang);
     htmlCache = {};
     applyStatic();
     if (state) renderState(state);
@@ -764,7 +850,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     if (refetchTimer) return;
     refetchTimer = setTimeout(function () {
       refetchTimer = null;
-      fetch('/api/state').then(function (r) { return r.json(); }).then(renderState);
+      fetch(api('/api/state')).then(function (r) { return r.json(); }).then(renderState);
     }, 250);
   }
   function renderState(s) {
@@ -776,10 +862,13 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
 
   applyStatic();
+  loadRuns();
+  setInterval(loadRuns, 30000);
   setInterval(function () { if (state) renderTop(state); }, 30000);
-  fetch('/api/state').then(function (r) { return r.json(); }).then(function (s) {
+  fetch(api('/api/state')).then(function (r) { return r.json(); }).then(function (s) {
     renderState(s);
-    var es = new EventSource('/api/stream?since=0');
+    loadRuns();
+    var es = new EventSource(api('/api/stream?since=0'));
     es.onmessage = function (m) {
       var env = JSON.parse(m.data);
       allEvents.push(env);

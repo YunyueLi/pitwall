@@ -1,5 +1,5 @@
 /**
- * The event model. An AgentOS run is an append-only sequence of envelopes;
+ * The event model. An Pitwall run is an append-only sequence of envelopes;
  * everything else — console views, task state, recovery — is a projection.
  *
  * Invariants:
@@ -89,7 +89,7 @@ export interface RunCreated {
   mode?: 'pair' | 'team';
   repo: string; // absolute path of the target repository
   agents: AgentSpec[];
-  agentosVersion: string;
+  engineVersion: string;
 }
 
 export type RunStatus = 'running' | 'paused' | 'awaiting-review' | 'done' | 'failed';

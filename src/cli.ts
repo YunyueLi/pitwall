@@ -5,27 +5,29 @@ import { readLedgerFile } from './core/ledger.js';
 import { reduce, currentGoal } from './core/state.js';
 import { clearControl, listRuns, readControl, resolveRunId, runDir } from './core/store.js';
 import { Orchestrator, type RunConfig } from './orchestrator/orchestrator.js';
-import { startControlServer, type ConsoleBackend } from './console/server.js';
+import { startControlServer, ledgerBackend } from './console/server.js';
+import { runMcpServer } from './mcp.js';
 
 const VERSION = '0.1.0';
 
-const HELP = `agentos ${VERSION} — a control plane for coding agents collaborating on one repository
+const HELP = `pitwall ${VERSION} — a control plane for coding agents collaborating on one repository
 
 Usage:
-  agentos run --repo <dir> --goal "<text>" [options]   Start a new run (foreground)
-  agentos resume [runId]                               Resume a run after crash/stop
-  agentos ls                                           List runs
-  agentos status [runId]                               Show run state (live or offline)
-  agentos tell [runId] [--to <agent|all>] [--override] [--interrupt] "<text>"
+  pitwall run --repo <dir> --goal "<text>" [options]   Start a new run (foreground)
+  pitwall resume [runId]                               Resume a run after crash/stop
+  pitwall ls                                           List runs
+  pitwall status [runId]                               Show run state (live or offline)
+  pitwall tell [runId] [--to <agent|all>] [--override] [--interrupt] "<text>"
                                                        Send a directive to agents
-  agentos goal [runId] [--supplement] "<text>"         Revise the goal (default: override)
-  agentos approve [runId] [--note "<text>"]            Approve the pending gate
-  agentos reject [runId] [--note "<text>"]             Reject the pending gate
-  agentos pause [runId] [--agent <name>] [--interrupt] Pause run or one agent
-  agentos unpause [runId] [--agent <name>]             Unpause run or one agent
-  agentos watch [runId]                                Follow the timeline in the terminal
-  agentos view [runId] [--port <n>]                    Open the web console for a finished run (read-only)
-  agentos stop [runId]                                 Stop a live orchestrator gracefully
+  pitwall goal [runId] [--supplement] "<text>"         Revise the goal (default: override)
+  pitwall approve [runId] [--note "<text>"]            Approve the pending gate
+  pitwall reject [runId] [--note "<text>"]             Reject the pending gate
+  pitwall pause [runId] [--agent <name>] [--interrupt] Pause run or one agent
+  pitwall unpause [runId] [--agent <name>]             Unpause run or one agent
+  pitwall watch [runId]                                Follow the timeline in the terminal
+  pitwall view [runId] [--port <n>]                    Web console for all runs (read-only, live-tails)
+  pitwall mcp                                          MCP server on stdio (plug Pitwall into any agent)
+  pitwall stop [runId]                                 Stop a live orchestrator gracefully
 
 Options for run:
   --repo <dir>            Target repository (default: cwd)
@@ -67,6 +69,8 @@ async function main(): Promise<void> {
       return cmdWatch(rest);
     case 'view':
       return cmdView(rest);
+    case 'mcp':
+      return runMcpServer(VERSION);
     case 'stop':
       return cmdStop(rest);
     case '--version':
@@ -161,7 +165,7 @@ async function serve(orch: Orchestrator, port: number): Promise<void> {
   orch.subscribe((env) => printTimeline([env], true));
 
   const shutdown = () => {
-    console.log('\nshutting down (run state is durable; `agentos resume` continues it)…');
+    console.log('\nshutting down (run state is durable; `pitwall resume` continues it)…');
     void orch.stop();
   };
   process.on('SIGINT', shutdown);
@@ -180,7 +184,7 @@ async function serve(orch: Orchestrator, port: number): Promise<void> {
 function cmdLs(): void {
   const runs = listRuns();
   if (!runs.length) {
-    console.log('no runs yet — start one with `agentos run --goal "…"`');
+    console.log('no runs yet — start one with `pitwall run --goal "…"`');
     return;
   }
   for (const r of runs) {
@@ -214,7 +218,7 @@ function cmdStatus(argv: string[]): void {
     );
   }
   const pending = [...state.approvals.values()].filter((x) => !x.decision);
-  for (const p of pending) console.log(`GATE     [${p.gate}] ${p.summary}\n         approve with: agentos approve ${runId}`);
+  for (const p of pending) console.log(`GATE     [${p.gate}] ${p.summary}\n         approve with: pitwall approve ${runId}`);
   if (state.changedFiles.size) {
     console.log(`files    ${[...state.changedFiles.keys()].join(', ')}`);
   }
@@ -226,7 +230,7 @@ async function api(runId: string, path: string, body: unknown): Promise<any> {
   const live = readControl(runDir(runId));
   if (!live) {
     throw new Error(
-      `run ${runId} has no live orchestrator — start one with \`agentos resume ${runId}\` first`,
+      `run ${runId} has no live orchestrator — start one with \`pitwall resume ${runId}\` first`,
     );
   }
   const res = await fetch(`http://127.0.0.1:${live.port}${path}`, {
@@ -319,7 +323,7 @@ async function cmdWatch(argv: string[]): Promise<void> {
   const { history } = loadState(runId);
   printTimeline(history, false);
   if (!live) {
-    console.log('\n(run is offline — showing recorded history; `agentos resume` to continue it)');
+    console.log('\n(run is offline — showing recorded history; `pitwall resume` to continue it)');
     return;
   }
   console.log(`\nconsole: http://127.0.0.1:${live.port}/  (following live events, Ctrl-C to detach)\n`);
@@ -347,32 +351,15 @@ async function cmdView(argv: string[]): Promise<void> {
     allowPositionals: true,
   });
   const runId = resolveRunId(positionals[0]);
-  const live = readControl(runDir(runId));
-  if (live) {
-    console.log(`run is live — console at http://127.0.0.1:${live.port}/`);
-    return;
-  }
-  const history = readLedgerFile(join(runDir(runId), 'events.jsonl'));
-  const created = history.find((e) => e.event.type === 'run.created')?.event;
-  const meta = created && created.type === 'run.created' ? created : undefined;
-  const backend: ConsoleBackend = {
-    dir: runDir(runId),
-    readonly: true,
-    state: () => reduce(history),
-    events: () => history,
-    subscribe: () => () => {},
-    criteria: () => meta?.criteria ?? [],
-    mode: () => meta?.mode ?? 'pair',
-  };
-  const { port } = await startControlServer(backend, Number(values.port));
-  console.log(`read-only console for ${runId}: http://127.0.0.1:${port}/  (Ctrl-C to close)`);
+  const { port } = await startControlServer(ledgerBackend(runId), Number(values.port));
+  console.log(`console (read-only, all runs): http://127.0.0.1:${port}/  (Ctrl-C to close)`);
   await new Promise(() => {}); // serve until interrupted
 }
 
 async function cmdStop(argv: string[]): Promise<void> {
   const runId = resolveRunId(argv[0]);
   await api(runId, '/api/stop', {});
-  console.log(`stop requested; run ${runId} can be continued later with \`agentos resume\``);
+  console.log(`stop requested; run ${runId} can be continued later with \`pitwall resume\``);
 }
 
 // ---------------------------------------------------------------------------
@@ -441,6 +428,6 @@ function firstLine(s: string, max: number): string {
 }
 
 main().catch((err) => {
-  console.error(`agentos: ${err instanceof Error ? err.message : err}`);
+  console.error(`pitwall: ${err instanceof Error ? err.message : err}`);
   process.exit(1);
 });

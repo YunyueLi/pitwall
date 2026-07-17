@@ -1,14 +1,21 @@
-# AgentOS
+# Pitwall
 
-**A local-first control plane for heterogeneous coding agents collaborating on one repository.**
+**The pit wall for your AI coding agents. Agents drive — you make the calls.**
 
-Claude Code implements. Codex reviews it — adversarially, in a read-only
-sandbox. You watch everything on one timeline, redirect them mid-flight, and
-nothing ships until *you* approve it. Kill the process at any moment;
-`agentos resume` continues exactly where the ledger left off.
+In Formula 1, drivers drive; the team watches telemetry from the pit wall,
+talks to them over team radio, and makes the strategy calls. Pitwall gives
+you that seat for heterogeneous coding agents working the same repository:
+Claude Code and Codex plan, build and review each other's work, while you
+watch one live timeline, radio in corrections mid-flight, and hold the only
+gate that ships anything. Kill the process at any moment; `pitwall resume`
+continues exactly where the ledger left off.
 
-> Working title. This name collides with existing projects and will change
-> before public release — see `docs/DESIGN.md §6`.
+- **Console** — a minimal, bilingual (中文/EN) web workspace: every run in
+  the sidebar, the agents' dialogue as the document, machine noise folded
+  away, gates as callouts.
+- **CLI** — everything works headless: `run` / `tell` / `approve` / `watch`.
+- **MCP** — `pitwall mcp` plugs the whole thing into any MCP-capable agent
+  (see [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)).
 
 ## Why
 
@@ -16,7 +23,7 @@ Running several coding agents in parallel worktrees is a solved problem
 (claude-squad, Vibe Kanban, Conductor, …). What no open tool does is let
 agents from **different vendors work the same task** — with division of
 labor, handoffs, objections and acceptance — while the human keeps one
-authoritative, recoverable view. AgentOS is built around three commitments:
+authoritative, recoverable view. Pitwall is built around three commitments:
 
 1. **The ledger is the product.** A run is an append-only event log with
    system-generated timestamps and provenance on every event. The console,
@@ -36,20 +43,20 @@ authoritative, recoverable view. AgentOS is built around three commitments:
 - [Claude Code](https://code.claude.com) CLI, logged in
 - [Codex CLI](https://developers.openai.com/codex) ≥ 0.144, logged in
 
-AgentOS drives both CLIs through their **official headless interfaces**
+Pitwall drives both CLIs through their **official headless interfaces**
 (`claude -p --output-format stream-json`, `codex exec --json`), under your
 own login, on your own machine. No scraping, no quota resale, no telemetry.
 
 ## Quick start
 
 ```bash
-git clone <this repo> && cd AgentOS
+git clone <this repo> && cd Pitwall
 npm install && npm run build
 
 # a tiny sample repo to watch the agents work on
 ./examples/create-demo-repo.sh /tmp/demo-repo
 
-node bin/agentos.js run \
+node bin/pitwall.js run \
   --repo /tmp/demo-repo \
   --goal "Add a median(values) function to src/stats.js, with tests." \
   --criteria "median is exported and handles odd-length arrays" \
@@ -63,16 +70,16 @@ agent cards with health, token and dollar totals, and the approval queue.
 While it runs, from a second terminal:
 
 ```bash
-agentos tell --to all --interrupt "Requirement update: median([]) must throw TypeError"
-agentos pause --agent claude          # pause one agent, not the run
-agentos status                        # works live or offline
+pitwall tell --to all --interrupt "Requirement update: median([]) must throw TypeError"
+pitwall pause --agent claude          # pause one agent, not the run
+pitwall status                        # works live or offline
 kill -9 <orchestrator pid>            # go ahead
-agentos resume                        # …and continue exactly where it stopped
-agentos reject --note "also update the README, then I'll accept"
-agentos approve
+pitwall resume                        # …and continue exactly where it stopped
+pitwall reject --note "also update the README, then I'll accept"
+pitwall approve
 ```
 
-(`agentos` = `node bin/agentos.js`, or `npm link` once.)
+(`pitwall` = `node bin/pitwall.js`, or `npm link` once.)
 
 ## What actually happens
 
@@ -116,7 +123,7 @@ criteria. You watch the board, and gates come to you only at the edges:
                                 accepted              (3 strikes → human tie-break)
 ```
 
-Anytime, in either mode: `agentos tell` routes a directive to one agent or
+Anytime, in either mode: `pitwall tell` routes a directive to one agent or
 all, as a supplement or an override, at the next turn boundary or immediately
 with `--interrupt` — always with a delivery receipt in the timeline.
 
@@ -131,7 +138,7 @@ src/cli.ts        run/resume/ls/status/tell/goal/approve/reject/pause/watch/stop
 ```
 
 Zero runtime dependencies. Everything a run produces lives in
-`~/.agentos/runs/<runId>/` as plain files (`events.jsonl` + per-agent raw
+`~/.pitwall/runs/<runId>/` as plain files (`events.jsonl` + per-agent raw
 sidecars) that you can read, redact, export or delete.
 
 Design rationale, market survey and the conflict table live in

@@ -81,7 +81,7 @@ export class Orchestrator {
 
   // -- construction ---------------------------------------------------------
 
-  static create(config: RunConfig, agentosVersion: string): Orchestrator {
+  static create(config: RunConfig, engineVersion: string): Orchestrator {
     const { runId, dir } = createRunDir(config.repo);
     const { ledger, history } = Ledger.open(dir);
     const orch = new Orchestrator(dir, runId, ledger, history, config);
@@ -93,7 +93,7 @@ export class Orchestrator {
       mode: config.mode,
       repo: config.repo,
       agents: [config.driver, config.reviewer],
-      agentosVersion,
+      engineVersion,
     });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.driver });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.reviewer });
@@ -278,7 +278,7 @@ export class Orchestrator {
         this.append(SYSTEM, {
           type: 'run.status',
           status: 'paused',
-          reason: 'agent turn failed; inspect the error, optionally `agentos tell`, then resume',
+          reason: 'agent turn failed; inspect the error, optionally `pitwall tell`, then resume',
         });
         this.runPaused = true;
         continue;
@@ -514,7 +514,7 @@ export class Orchestrator {
       this.append(SYSTEM, {
         type: 'run.status',
         status: 'paused',
-        reason: 'engineer is blocked and asked the human a question; answer with `agentos tell` then resume',
+        reason: 'engineer is blocked and asked the human a question; answer with `pitwall tell` then resume',
       });
       this.runPaused = true;
       return 'ok';
@@ -740,7 +740,7 @@ export class Orchestrator {
       this.append(SYSTEM, {
         type: 'run.status',
         status: 'paused',
-        reason: `driver is blocked and asked the human a question; answer with \`agentos tell\` then resume`,
+        reason: `driver is blocked and asked the human a question; answer with \`pitwall tell\` then resume`,
       });
       this.runPaused = true;
       return 'ok';

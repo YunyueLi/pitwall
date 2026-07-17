@@ -1,4 +1,4 @@
-# Contributing to AgentOS
+# Contributing to Pitwall
 
 Thanks for your interest. This project is young; the fastest way to help is
 to run the demo, break it, and file precise issues.
@@ -23,7 +23,7 @@ to run the demo, break it, and file precise issues.
 npm install
 npm run build        # tsc → dist/
 npm test             # unit tests (node:test)
-./examples/create-demo-repo.sh /tmp/demo && node bin/agentos.js run --repo /tmp/demo --goal "…"
+./examples/create-demo-repo.sh /tmp/demo && node bin/pitwall.js run --repo /tmp/demo --goal "…"
 ```
 
 Adapters are validated against real CLIs; when you touch one, state the CLI
@@ -42,5 +42,5 @@ verified, don't guess.
 ## Compatibility policy
 
 Until 1.0, the event schema may change; runs are not guaranteed portable
-across versions (the ledger records `agentosVersion` for exactly this
+across versions (the ledger records `engineVersion` for exactly this
 reason). After 1.0, event schema changes will be additive or versioned.

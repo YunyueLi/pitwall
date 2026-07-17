@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Creates a small Node.js repository used by the AgentOS demo:
-#   agentos run --repo <dir> --goal "Add a median() function …"
+# Creates a small Node.js repository used by the Pitwall demo:
+#   pitwall run --repo <dir> --goal "Add a median() function …"
 set -euo pipefail
 
 DIR="${1:?usage: create-demo-repo.sh <target-dir>}"
@@ -50,7 +50,7 @@ EOF
 cat > README.md <<'EOF'
 # demo-stats
 
-Tiny statistics library used to demonstrate AgentOS multi-agent collaboration.
+Tiny statistics library used to demonstrate Pitwall multi-agent collaboration.
 Run tests with `npm test`.
 EOF
 

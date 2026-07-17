@@ -2,13 +2,13 @@
 
 ## Model
 
-AgentOS runs coding agents with real filesystem and shell access on your
+Pitwall runs coding agents with real filesystem and shell access on your
 machine. The security posture is:
 
 - **Local only by default.** The console/control server binds to 127.0.0.1.
   There is no remote access, no cloud component, and **no telemetry of any
   kind** — nothing is collected, phoned home, or shared.
-- **Ledger contains sensitive data.** `~/.agentos/runs/` stores full prompts,
+- **Ledger contains sensitive data.** `~/.pitwall/runs/` stores full prompts,
   agent output, file paths and diffs of whatever repository you ran on. Treat
   it like your shell history: export deliberately, delete freely.
 - **Sandboxing is delegated, honestly.** The reviewer seat runs Codex under
@@ -21,7 +21,7 @@ machine. The security posture is:
   treat them as data. A sufficiently adversarial repository can still mislead
   an agent; the human acceptance gate and the read-only reviewer exist for
   exactly that reason.
-- **Secrets:** AgentOS never reads or stores your API credentials; it invokes
+- **Secrets:** Pitwall never reads or stores your API credentials; it invokes
   the vendor CLIs, which use their own auth. Prompts and ledgers are not
   scrubbed for secrets yet (roadmap) — avoid pasting secrets into goals and
   directives.

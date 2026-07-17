@@ -1,4 +1,4 @@
-# AgentOS Design Document
+# Pitwall Design Document
 
 *Written 2026-07. This document records the product judgment behind the first
 vertical slice: what the problem actually is, what already exists, which
@@ -65,7 +65,7 @@ console, the CLI timeline, task state, crash recovery — is a projection of it.
   of failure.)
 - Every envelope carries `origin`: `human`, `agent:<name>`, or `system`.
   Provenance is data, not prose.
-- The ledger lives **outside the target repository** (`~/.agentos/runs/…`),
+- The ledger lives **outside the target repository** (`~/.pitwall/runs/…`),
   so agents cannot casually rewrite their own audit trail and the repo stays
   clean.
 - Replay tolerates a torn tail write; an acknowledged append is fsync'd.
@@ -139,7 +139,7 @@ explicit at every hop, which is the precondition for any stronger policy.
 | Conflict | Resolution |
 |---|---|
 | "Show me everything" vs. readability | One ledger, four display layers (state / messages / actions / tool detail); raw vendor streams in sidecars, expandable on demand, never load-bearing. |
-| Full auditability vs. privacy | Local-first; ledger outside the repo; console binds to 127.0.0.1; zero telemetry; export is a deliberate act (`~/.agentos` is plain files you can redact or delete). |
+| Full auditability vs. privacy | Local-first; ledger outside the repo; console binds to 127.0.0.1; zero telemetry; export is a deliberate act (`~/.pitwall` is plain files you can redact or delete). |
 | Agent autonomy vs. human authority | Agents run whole turns without pestering; human authority enters at turn boundaries, or immediately via interrupt; the final gate is always human. |
 | Idempotent recovery vs. real side effects | Turn = recovery unit; recovery prompt forces a state audit before action; vendor-native session resume preserves agent memory. |
 | Vendor capability drift vs. stable core | Adapters are thin and empirically smoke-tested; core never imports vendor types. ACP adapter is the planned third backend once cost/session gaps close. |
@@ -162,6 +162,9 @@ Each of these is listed in the roadmap with the abstraction it plugs into.
 
 ## 6. Naming
 
-"AgentOS" collides with several existing projects (including an active
-mobile-first agent manager). Rename before public release; the repository
-name is kept for now at the workspace level.
+Started as the working title "AgentOS", which collides with several existing
+projects. Renamed to **Pitwall** (2026-07): the Formula 1 pit wall is where
+the team watches telemetry, radios the drivers, and makes the strategy calls
+— exactly this product's seat for the human. Checked at rename time: no
+notable software project or npm-famous package holds the name; search results
+are F1 content, which is the association we want.
