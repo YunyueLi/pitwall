@@ -90,6 +90,9 @@ export interface RunCreated {
   repo: string; // absolute path of the target repository
   agents: AgentSpec[];
   engineVersion: string;
+  /** Autonomous mode: gates auto-resolve, the run never blocks on a human.
+   * Humans can still watch, direct and overrule at any moment. */
+  autonomous?: boolean;
 }
 
 export type RunStatus = 'running' | 'paused' | 'awaiting-review' | 'done' | 'failed';

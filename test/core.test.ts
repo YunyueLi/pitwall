@@ -108,3 +108,23 @@ test('agent reply parsing: last agentos block wins, garbage tolerated', () => {
   const broken = '```agentos\n{not json}\n```';
   assert.equal(parseAgentReply(broken).json, undefined);
 });
+
+test('autonomous mode: a system-origin allow resolves a gate exactly like a human one', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pw-auto-'));
+  try {
+    const { ledger } = Ledger.open(dir);
+    ledger.append({ kind: 'system' }, { type: 'run.created', runId: 'r1', goal: 'g', repo: '/tmp/r', agents: [], engineVersion: 't', autonomous: true } as any);
+    ledger.append({ kind: 'system' }, { type: 'approval.requested', approvalId: 'ap1', gate: 'plan', summary: 'plan ready' } as any);
+    let s = reduce(readLedgerFile(join(dir, 'events.jsonl')));
+    assert.equal([...s.approvals.values()].filter((a) => !a.decision).length, 1, 'gate is pending');
+
+    // what Orchestrator.autoResolveGates appends
+    ledger.append({ kind: 'system' }, { type: 'approval.resolved', approvalId: 'ap1', decision: 'allow', note: 'auto-approved (autonomous mode)' } as any);
+    s = reduce(readLedgerFile(join(dir, 'events.jsonl')));
+    assert.equal(s.approvals.get('ap1')!.decision, 'allow', 'system-origin resolution lands');
+    assert.equal([...s.approvals.values()].filter((a) => !a.decision).length, 0, 'nothing pending');
+    ledger.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

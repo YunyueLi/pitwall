@@ -238,10 +238,12 @@ async function handle(primary: ConsoleBackend, req: IncomingMessage, res: Server
 function serializeState(orch: ConsoleBackend): unknown {
   const s = orch.state();
   const events = orch.events();
+  const created = events.find((e) => e.event.type === 'run.created')?.event;
   return {
     runId: s.runId,
     repo: s.repo,
     mode: orch.mode(),
+    autonomous: created?.type === 'run.created' ? !!created.autonomous : false,
     readonly: !!orch.readonly,
     startedTs: events[0]?.ts,
     lastTs: events[events.length - 1]?.ts,

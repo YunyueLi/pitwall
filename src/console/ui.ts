@@ -452,6 +452,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     [/^human rejected acceptance(.*)$/, '你驳回了验收$1'],
     [/^human sided with the objection(.*)$/, '你支持了驳回意见$1'],
     [/^accepted by human$/, '人类已验收'], [/^task accepted by human$/, '人类已验收'],
+    [/^accepted \(autonomous mode\)$/, '已验收（自主模式）'],
+    [/^auto-approved \(autonomous mode\)$/, '自动放行（自主模式）'],
     [/^resumed from ledger$/, '已从账本恢复'],
     [/^paused by human$/, '被人类暂停'], [/^resumed by human$/, '被人类恢复'],
     [/^orchestrator stopped$/, '编排器已停止'],
@@ -674,7 +676,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
     // header
     el('hdot').className = 'dot ' + (isWorking ? 'working' : s.status);
-    setHtml('crumb', '<span class="g">' + esc(t(s.mode)) + '</span><span class="csep">·</span><span>' + esc(t(s.status)) + '</span>');
+    setHtml('crumb', '<span class="g">' + esc(t(s.mode)) + '</span>'
+      + (s.autonomous ? '<span class="csep">·</span><span>' + (lang === 'zh' ? '自主' : 'auto') + '</span>' : '')
+      + '<span class="csep">·</span><span>' + esc(t(s.status)) + '</span>');
     el('runid').textContent = s.runId;
     el('pauseBtn').textContent = t(s.status === 'paused' ? 'Resume' : 'Pause');
     el('pauseBtn').style.display = s.readonly ? 'none' : '';
@@ -693,6 +697,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     el('teleState').className = isWorking ? 'shimmer' : '';
     el('teleState').textContent = isWorking ? (lang === 'zh' ? stateWord + ' 工作中…' : stateWord + ' working…') : stateWord;
     var subBits = [t(s.mode)];
+    if (s.autonomous) subBits.push(lang === 'zh' ? '自主模式' : 'autonomous');
     if (s.statusReason) subBits.push(tSys(s.statusReason));
     el('teleSub').textContent = subBits.join(' · ');
 

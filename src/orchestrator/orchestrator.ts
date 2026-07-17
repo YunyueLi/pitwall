@@ -36,6 +36,10 @@ export interface RunConfig {
   reviewer: AgentSpec;
   maxReviewRounds: number;
   turnTimeoutMs: number;
+  /** When true, gates auto-resolve as 'allow' and the run never blocks on a
+   * human. The gates still appear on the timeline; a human can still watch,
+   * pause, direct and overrule at any moment — they are just not required. */
+  autonomous?: boolean;
 }
 
 const HUMAN: Origin = { kind: 'human' };
@@ -94,6 +98,7 @@ export class Orchestrator {
       repo: config.repo,
       agents: [config.driver, config.reviewer],
       engineVersion,
+      autonomous: config.autonomous || undefined,
     });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.driver });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.reviewer });
@@ -111,7 +116,7 @@ export class Orchestrator {
     return orch;
   }
 
-  static resume(runId: string, overrides: Partial<Pick<RunConfig, 'maxReviewRounds' | 'turnTimeoutMs'>> = {}): Orchestrator {
+  static resume(runId: string, overrides: Partial<Pick<RunConfig, 'maxReviewRounds' | 'turnTimeoutMs' | 'autonomous'>> = {}): Orchestrator {
     const dir = runDir(runId);
     const { ledger, history } = openRun(dir);
     const created = history.find((e) => e.event.type === 'run.created')?.event;
@@ -125,6 +130,7 @@ export class Orchestrator {
       reviewer: created.agents[1]!,
       maxReviewRounds: overrides.maxReviewRounds ?? 3,
       turnTimeoutMs: overrides.turnTimeoutMs ?? 20 * 60 * 1000,
+      autonomous: overrides.autonomous ?? created.autonomous ?? false,
     };
     const orch = new Orchestrator(dir, runId, ledger, history, config);
     // Close out turns that were in flight when the previous process died.
@@ -231,6 +237,27 @@ export class Orchestrator {
 
   // -- run loop --------------------------------------------------------------
 
+  /** Autonomous mode: allow every pending gate so the run never blocks on a
+   * human. The approval events stay on the timeline (the board still shows
+   * each gate and its auto-resolution), and a human who is watching can still
+   * beat the loop to a decision — a human resolution always wins because it
+   * lands first and resolving twice is rejected. */
+  private autoResolveGates(state: RunState): boolean {
+    if (!this.config.autonomous) return false;
+    let did = false;
+    for (const ap of state.approvals.values()) {
+      if (ap.decision) continue;
+      this.append(SYSTEM, {
+        type: 'approval.resolved',
+        approvalId: ap.approvalId,
+        decision: 'allow',
+        note: 'auto-approved (autonomous mode)',
+      });
+      did = true;
+    }
+    return did;
+  }
+
   async run(): Promise<void> {
     try {
       await this.loop();
@@ -245,11 +272,16 @@ export class Orchestrator {
     while (!this.stopping) {
       const state = this.state();
       if (state.status === 'done' || state.status === 'failed') return;
+      if (this.autoResolveGates(state)) continue; // re-reduce with the fresh decisions
 
       const step = this.config.mode === 'team' ? await this.teamStep(state) : await this.pairStep(state);
 
       if (step === 'done') {
-        this.append(SYSTEM, { type: 'run.status', status: 'done', reason: 'accepted by human' });
+        this.append(SYSTEM, {
+          type: 'run.status',
+          status: 'done',
+          reason: this.config.autonomous ? 'accepted (autonomous mode)' : 'accepted by human',
+        });
         return;
       }
       if (step === 'wait') {

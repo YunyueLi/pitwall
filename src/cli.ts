@@ -39,6 +39,9 @@ Options for run:
   --reviewer-model <m>    Model override for the reviewer
   --max-rounds <n>        Max review rounds before forcing human decision (default: 3)
   --turn-timeout <min>    Minutes before a stuck turn is interrupted (default: 20)
+  --auto                  Autonomous mode: gates auto-approve, the run never waits
+                          for a human (you can still watch, direct and overrule).
+                          On resume: --auto turns it on, --no-auto turns it off.
   --port <n>              Console port (default: random)
 `;
 
@@ -113,6 +116,7 @@ async function cmdRun(argv: string[]): Promise<void> {
       'reviewer-model': { type: 'string' },
       'max-rounds': { type: 'string', default: '3' },
       'turn-timeout': { type: 'string', default: '20' },
+      auto: { type: 'boolean', default: false },
       port: { type: 'string', default: '0' },
     },
   });
@@ -138,6 +142,7 @@ async function cmdRun(argv: string[]): Promise<void> {
     reviewer,
     maxReviewRounds: Number(values['max-rounds']),
     turnTimeoutMs: Number(values['turn-timeout']) * 60 * 1000,
+    autonomous: !!values.auto,
   };
   const orch = Orchestrator.create(config, VERSION);
   await serve(orch, Number(values.port));
@@ -146,13 +151,15 @@ async function cmdRun(argv: string[]): Promise<void> {
 async function cmdResume(argv: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
     args: argv,
-    options: { port: { type: 'string', default: '0' } },
+    options: { port: { type: 'string', default: '0' }, auto: { type: 'boolean' }, 'no-auto': { type: 'boolean' } },
     allowPositionals: true,
   });
   const runId = resolveRunId(positionals[0]);
   const live = readControl(runDir(runId));
   if (live) throw new Error(`run ${runId} already has a live orchestrator (pid ${live.pid})`);
-  const orch = Orchestrator.resume(runId);
+  const orch = Orchestrator.resume(runId, {
+    autonomous: values.auto ? true : values['no-auto'] ? false : undefined,
+  });
   await serve(orch, Number(values.port));
 }
 
