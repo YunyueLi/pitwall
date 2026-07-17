@@ -88,7 +88,14 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   body.side-off .app { --cl: 64px; }
   body.rail-off .app { --cr: 0px; }
   @media (max-width: 1180px) { .app { grid-template-columns: var(--cl) 1fr; grid-template-areas: "side head" "side main"; } .rail { display: none; } .railtoggle { display: none; } }
-  @media (max-width: 900px) { .app { --cl: 64px; } }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-areas: "head" "main"; }
+    .side { position: fixed; top: 0; bottom: 0; left: 0; width: 264px; transform: translateX(-101%); z-index: 45; transition: transform .3s var(--spring), box-shadow .3s var(--spring); }
+    .side.open { transform: none; box-shadow: var(--shadow-l); }
+    .scrim { display: none; position: fixed; inset: 0; z-index: 44; background: rgba(15,13,10,.28); opacity: 0; transition: opacity .3s var(--ease); }
+    body.side-open .scrim { display: block; opacity: 1; }
+    .menubtn { display: inline-flex !important; }
+  }
 
   /* header */
   header { grid-area: head; display: flex; align-items: center; gap: 10px; padding: 0 14px;
@@ -104,6 +111,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .hbtn:hover { background: var(--fill2); color: var(--ink); }
   .hbtn.icobtn { width: 30px; padding: 0; font-size: 14px; }
   .hbtn svg { width: 16px; height: 16px; }
+  .menubtn { display: none; }
   .railtoggle svg { transition: transform .3s var(--spring); }
   body.rail-off .railtoggle svg { transform: scaleX(-1); }
 
@@ -151,12 +159,29 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .runrow .m .want { color: var(--flag); font-family: var(--sans); font-weight: 600; }
   .runrow .m .lv { display: inline-flex; align-items: center; gap: 5px; color: var(--ok); }
   .runrow .m .prog { margin-left: auto; }
-  .foot { margin-top: auto; padding: 12px 8px 4px; border-top: 1px solid var(--hair); flex: none; }
-  .acct { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--ink2); white-space: nowrap; }
+  .foot { margin-top: auto; padding: 12px 8px 4px; border-top: 1px solid var(--hair); flex: none; position: relative; }
+  .acct { display: flex; align-items: center; gap: 9px; width: 100%; padding: 6px 8px; border-radius: 9px; font-size: 12.5px; color: var(--ink2); white-space: nowrap; transition: background .16s var(--ease); }
+  .acct:hover { background: var(--fill2); }
   .acct .me { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--ink), color-mix(in srgb, var(--ink) 60%, var(--flag))); color: var(--paper); display: grid; place-items: center; font-size: 10px; font-weight: 650; flex: none; }
-  .acct .lk { margin-left: auto; color: var(--ink3); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; transition: background .15s, color .15s; }
-  .acct .lk:hover { background: var(--fill2); color: var(--ink); }
-  .acct .lk svg { width: 14px; height: 14px; }
+  .acct .nm2 { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+  .acct .chev { width: 14px; height: 14px; color: var(--ink3); flex: none; transition: transform .2s var(--spring); }
+  body.acct-open .acct .chev { transform: rotate(180deg); }
+  .acctmenu { position: absolute; left: 8px; right: 8px; bottom: calc(100% - 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--pop, var(--shadow-l)); padding: 8px; opacity: 0; transform: translateY(8px) scale(.98); transform-origin: bottom center; pointer-events: none; transition: opacity .18s var(--ease), transform .24s var(--spring); z-index: 40; }
+  body.acct-open .acctmenu { opacity: 1; transform: none; pointer-events: auto; }
+  .amlabel { font-size: 10.5px; color: var(--ink3); font-weight: 500; padding: 8px 8px 6px; }
+  .seg { display: flex; gap: 3px; background: var(--fill2); border-radius: 9px; padding: 3px; }
+  .seg button { flex: 1; padding: 6px 6px; border-radius: 7px; font-size: 12px; color: var(--ink2); transition: background .16s, color .16s, box-shadow .16s; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s); font-weight: 560; }
+  .amsep { height: 1px; background: var(--line); margin: 8px 4px; }
+  .amitem { display: flex; align-items: center; gap: 9px; padding: 8px; border-radius: 8px; font-size: 12.5px; color: var(--ink2); transition: background .16s, color .16s; }
+  .amitem:hover { background: var(--fill2); color: var(--ink); }
+  .amitem svg { width: 15px; height: 15px; flex: none; }
+  .amabout { color: var(--ink3); font-size: 11px; cursor: default; pointer-events: none; padding-top: 4px; }
+  body.side-off .side:not(.peek) .foot { padding: 12px 0 4px; display: grid; place-items: center; }
+  body.side-off .side:not(.peek) .acct { width: auto; padding: 6px; }
+  body.side-off .side:not(.peek) .acct .nm2, body.side-off .side:not(.peek) .acct .chev { display: none; }
+  body.side-off .side:not(.peek) .acctmenu { display: none; }
   /* collapsed icon rail */
   body.side-off .side:not(.peek) { padding: 0 8px 12px; }
   body.side-off .side:not(.peek) .brand { justify-content: center; padding: 0; }
@@ -168,8 +193,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   body.side-off .side:not(.peek) .runrow { padding: 9px 0; }
   body.side-off .side:not(.peek) .runrow .r1 { justify-content: center; }
   body.side-off .side:not(.peek) .runrow .g, body.side-off .side:not(.peek) .runrow .m { display: none; }
-  body.side-off .side:not(.peek) .foot { padding: 12px 0 4px; display: grid; place-items: center; }
-  body.side-off .side:not(.peek) .acct .lk, body.side-off .side:not(.peek) .acct .nm2 { display: none; }
   body.side-off .side.peek { position: absolute; top: 0; bottom: 0; left: 0; width: 260px; box-shadow: var(--shadow-l); border-radius: 0 16px 16px 0; background: var(--panel); z-index: 35; }
 
   /* main / document */
@@ -226,6 +249,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .body p { margin: 0 0 10px; } .body p:last-child { margin: 0; }
   .body pre { background: var(--codebg); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font: 12.5px/1.6 var(--mono); margin: 10px 0; }
   .body code { font: .9em var(--mono); background: var(--fill2); border-radius: 5px; padding: 1px 5px; }
+  .body .pathref { font: .9em var(--mono); color: var(--ink2); border-bottom: 1px dotted var(--line2); }
+  .body a { color: var(--live); border-bottom: 1px solid var(--live-line); }
   .body pre code { background: none; padding: 0; }
   .body ul { margin: 6px 0 10px; padding-left: 22px; } .body li { margin: 2px 0; }
   .verdict { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font: 600 12.5px/1 var(--sans); padding: 6px 11px; border-radius: 999px; }
@@ -261,6 +286,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .tele .core { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: var(--surface); box-shadow: var(--inset); }
   .ts { display: flex; align-items: center; gap: 9px; }
   .ts .w { font-size: 15px; font-weight: 620; letter-spacing: -.01em; }
+  .ts .pausebtn { margin-left: auto; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--ink3); font-size: 12px; transition: background .16s, color .16s; flex: none; }
+  .ts .pausebtn:hover { background: var(--fill2); color: var(--ink); }
   .tsub { font-size: 12px; color: var(--ink3); margin-top: 3px; }
   .spark { margin-top: 14px; height: 34px; width: 100%; display: block; }
   .tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 12px; margin-top: 14px; }
@@ -314,7 +341,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   /* composer */
   .composer { position: absolute; left: 260px; right: 340px; bottom: 0; z-index: 12; padding: 16px 30px 20px; background: linear-gradient(180deg, transparent, var(--paper) 44%); pointer-events: none; transition: left .34s var(--spring), right .34s var(--spring); }
   @media (max-width: 1180px) { .composer { right: 0; } }
-  @media (max-width: 900px) { .composer { left: 64px; } }
+  @media (max-width: 900px) { .composer { left: 0 !important; } }
   body.side-off .composer { left: 64px; }
   body.rail-off .composer { right: 0; }
   .cwrap { max-width: 704px; margin: 0 auto; pointer-events: auto; }
@@ -325,6 +352,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .cbox textarea { width: 100%; border: none; background: none; outline: none; resize: none; font: 14.5px/1.55 var(--sans); color: var(--ink); max-height: 150px; min-height: 22px; }
   .cbox textarea::placeholder { color: var(--ink3); }
   .row2 { display: flex; align-items: center; gap: 3px; margin-top: 9px; }
+  .optrow { display: none; align-items: center; gap: 3px; }
+  .cbox:focus-within .optrow, .optrow.pinned { display: flex; }
   .selchip { font-size: 12px; color: var(--ink3); padding: 5px 10px; border-radius: 9px; transition: background .16s, color .16s; white-space: nowrap; }
   .selchip:hover { background: var(--fill2); color: var(--ink2); }
   .selchip.on { color: var(--ink); background: var(--fill2); }
@@ -344,12 +373,10 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 <body>
 <div class="app" id="app">
   <header>
+    <button class="hbtn icobtn menubtn" id="menuBtn" title="Runs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <span class="crumb" id="crumb"></span>
     <span class="sp"></span>
     <span class="runid" id="runid"></span>
-    <button class="hbtn icobtn" id="themeBtn" title="Theme">◐</button>
-    <button class="hbtn" id="langBtn">EN</button>
-    <button class="hbtn" id="pauseBtn"></button>
     <button class="hbtn icobtn railtoggle" id="railBtn" title="Panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M15 4v16"/></svg></button>
   </header>
 
@@ -376,7 +403,26 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     <div class="sfilter" id="sfilter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="filterIn" type="text"></div>
     <div id="runlist"></div>
     <div class="foot">
-      <div class="acct"><span class="me">你</span><span class="nm2" id="identity"></span><a class="lk" href="https://github.com/YunyueLi/pitwall" target="_blank" rel="noopener" title="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 2.9.9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5 4-1.4 6.8-5.2 6.8-9.7C22 6.6 17.5 2 12 2z"/></svg></a></div>
+      <button class="acct" id="acctBtn">
+        <span class="me">你</span><span class="nm2" id="identity"></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="acctmenu" id="acctMenu">
+        <div class="amlabel" id="amAppearance"></div>
+        <div class="seg" id="themeSeg">
+          <button data-theme="light" id="tmLight"></button>
+          <button data-theme="dark" id="tmDark"></button>
+          <button data-theme="auto" id="tmAuto"></button>
+        </div>
+        <div class="amlabel" id="amLanguage"></div>
+        <div class="seg" id="langSeg">
+          <button data-lang="zh">中文</button>
+          <button data-lang="en">English</button>
+        </div>
+        <div class="amsep"></div>
+        <a class="amitem" href="https://github.com/YunyueLi/pitwall" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 2.9.9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5 4-1.4 6.8-5.2 6.8-9.7C22 6.6 17.5 2 12 2z"/></svg><span id="amGithub">GitHub</span></a>
+        <div class="amitem amabout" id="amAbout"></div>
+      </div>
     </div>
   </aside>
 
@@ -391,7 +437,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   <aside class="rail" id="rail">
     <div class="tele"><div class="core">
-      <div class="ts"><span class="dot" id="hdot"></span><span class="w" id="teleState"></span></div>
+      <div class="ts"><span class="dot" id="hdot"></span><span class="w" id="teleState"></span><button class="pausebtn" id="pauseBtn" title="Pause"></button></div>
       <div class="tsub" id="teleSub"></div>
       <canvas class="spark" id="spark"></canvas>
       <div class="tgrid" id="teleGrid"></div>
@@ -408,10 +454,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       <div class="cbox"><div class="in">
         <textarea id="dirText" rows="1"></textarea>
         <div class="row2">
-          <span id="scopeChips"></span>
-          <span class="chipdiv"></span>
-          <button class="selchip" id="modeChip"></button>
-          <button class="selchip warn" id="intChip"></button>
+          <span class="optrow" id="optRow"><span id="scopeChips"></span><span class="chipdiv"></span><button class="selchip" id="modeChip"></button><button class="selchip warn" id="intChip"></button></span>
           <span class="sp"></span>
           <button class="sendbtn" id="sendBtn" title="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
         </div>
@@ -420,6 +463,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     </div>
   </div>
 </div>
+<div class="scrim" id="scrim"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -512,14 +556,13 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   var cache = {};
   function setHtml(id, html) { if (cache[id] === html) return; cache[id] = html; $(id).innerHTML = html; }
 
-  // ---- theme
+  // ---- theme (lives in the account menu, not the chrome)
   function applyTheme() {
     var u = new URLSearchParams(location.search).get('theme');
     var m = (u === 'light' || u === 'dark' || u === 'auto') ? u : (localStorage.getItem('pitwall-theme') || 'auto');
     if (m === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', m);
-    $('themeBtn').textContent = m === 'light' ? '☀' : m === 'dark' ? '☾' : '◐';
+    ['light', 'dark', 'auto'].forEach(function (x) { var b = $('tm' + x.charAt(0).toUpperCase() + x.slice(1)); if (b) b.classList.toggle('on', x === m); });
   }
-  $('themeBtn').onclick = function () { var o = ['auto', 'light', 'dark'], c = localStorage.getItem('pitwall-theme') || 'auto'; localStorage.setItem('pitwall-theme', o[(o.indexOf(c) + 1) % 3]); applyTheme(); drawSpark(); };
 
   // ---- markdown-lite
   var FENCE_PW = new RegExp(BT + BT + BT + '(?:pitwall|agentos)\\s*\\n([\\s\\S]*?)' + BT + BT + BT, 'g');
@@ -529,6 +572,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   function md(text) { var out = [], last = 0, m; FENCE.lastIndex = 0; var s = String(text || ''); while ((m = FENCE.exec(s))) { out.push(inline(s.slice(last, m.index))); out.push('<pre><code>' + esc(m[2]) + '</code></pre>'); last = m.index + m[0].length; } out.push(inline(s.slice(last))); return out.join(''); }
   function inline(t0) {
     var s = esc(t0).replace(INLINE, function (_, c) { return '<code>' + c + '</code>'; }).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>').replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<span class="pathref">$1</span>');
     return s.split(/\n{2,}/).map(function (p) {
       var lines = p.split('\n');
       var isList = lines.length > 1 && lines.every(function (l) { return /^\s*([-*]|\d+[.)])\s/.test(l) || !l.trim(); });
@@ -542,7 +586,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   var interrupt = false, mode = 'supplement';
   function applyStatic() {
     document.documentElement.lang = lang;
-    $('langBtn').textContent = lang === 'zh' ? 'EN' : '中文';
     $('tNew').textContent = t('New run'); $('tSearch').textContent = t('Search runs');
     $('secRoom').textContent = t('Conversation'); $('secTasks').textContent = t('Plan');
     $('secAgents').textContent = t('Agents'); $('secCrit').textContent = t('Criteria'); $('secFiles').textContent = t('Changes');
@@ -551,14 +594,26 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     $('noiseChip').textContent = t(showNoise ? 'hide steps' : 'show steps');
     $('dirText').placeholder = t('Add guidance, change direction, or overrule…');
     $('dirHint').textContent = t(interrupt ? 'Aborts the current turn and re-delivers immediately.' : 'Lands at the next turn boundary, with a delivery receipt.');
-    $('intChip').textContent = t('interrupt'); renderModeChip();
+    $('intChip').textContent = t('interrupt');
+    $('amAppearance').textContent = lang === 'zh' ? '外观' : 'Appearance';
+    $('amLanguage').textContent = lang === 'zh' ? '语言' : 'Language';
+    $('tmLight').textContent = lang === 'zh' ? '浅色' : 'Light';
+    $('tmDark').textContent = lang === 'zh' ? '深色' : 'Dark';
+    $('tmAuto').textContent = lang === 'zh' ? '跟随系统' : 'System';
+    $('amAbout').textContent = 'Pitwall · Apache-2.0';
+    [].forEach.call($('langSeg').children, function (b) { b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    renderModeChip();
   }
 
   // ---- sidebar collapse / peek / logo / search
   function spinMark() { var m = $('mk'); if (!m || reduce) return; m.classList.remove('spin'); void m.offsetWidth; m.classList.add('spin'); }
   $('mk').addEventListener('animationend', function () { $('mk').classList.remove('spin'); }, true);
   function toggleSide() { spinMark(); var off = document.body.classList.toggle('side-off'); localStorage.setItem('pitwall-side', off ? '1' : '0'); $('side').classList.remove('peek'); }
-  $('sideBtn').onclick = function (e) { e.stopPropagation(); toggleSide(); };
+  function openDrawer() { $('side').classList.add('open'); document.body.classList.add('side-open'); }
+  function closeDrawer() { $('side').classList.remove('open'); document.body.classList.remove('side-open'); }
+  $('menuBtn').onclick = function (e) { e.stopPropagation(); $('side').classList.contains('open') ? closeDrawer() : openDrawer(); };
+  $('scrim').onclick = closeDrawer;
+  $('sideBtn').onclick = function (e) { e.stopPropagation(); if (window.innerWidth <= 900) { closeDrawer(); return; } toggleSide(); };
   $('brandHome').onclick = function () { spinMark(); if (document.body.classList.contains('side-off')) { document.body.classList.remove('side-off'); localStorage.setItem('pitwall-side', '0'); $('side').classList.remove('peek'); } };
   $('side').addEventListener('mouseenter', function () { if (document.body.classList.contains('side-off')) $('side').classList.add('peek'); });
   $('side').addEventListener('mouseleave', function () { if (document.body.classList.contains('side-off')) $('side').classList.remove('peek'); });
@@ -651,7 +706,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       + (s.autonomous ? '<span class="csep">·</span><span>' + (lang === 'zh' ? '自主' : 'auto') + '</span>' : '')
       + '<span class="csep">·</span><span>' + esc(t(s.status)) + '</span>');
     $('runid').textContent = s.runId;
-    $('pauseBtn').textContent = t(s.status === 'paused' ? 'Resume' : 'Pause');
+    $('pauseBtn').innerHTML = s.status === 'paused' ? '▷' : '❙❙';
+    $('pauseBtn').title = t(s.status === 'paused' ? 'Resume' : 'Pause');
     $('pauseBtn').style.display = s.readonly ? 'none' : '';
     document.title = 'Pitwall — ' + t(s.status);
     $('goal').textContent = s.goal;
@@ -790,7 +846,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       case 'error': html = sysLine('no', '✕', '<span style="color:var(--bad)">' + esc(e.scope) + ' — ' + esc(e.message) + '</span>'); break;
     }
     if (!html) return; var div = document.createElement('div'); div.innerHTML = html; conv.appendChild(div.firstChild);
-    var m = $('main'); m.scrollTop = m.scrollHeight;
+    if (!new URLSearchParams(location.search).get('snapshot')) { var m = $('main'); m.scrollTop = m.scrollHeight; }
   }
   function rebuildConv() { $('conv').innerHTML = ''; curSteps = null; allEvents.forEach(appendEvent); }
 
@@ -813,17 +869,23 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var names = ['all'].concat(s.agents.map(function (a) { return a.name; }));
     setHtml('scopeChips', names.map(function (n) { var label = n === 'all' ? t('to all') : (lang === 'zh' ? t('to ') + n : '@' + n); return '<button class="selchip' + (scope === n ? ' on' : '') + '" data-scope="' + esc(n) + '">' + esc(label) + '</button>'; }).join(''));
   }
-  $('scopeChips').addEventListener('click', function (ev) { var c = ev.target.closest('.selchip'); if (!c) return; scope = c.getAttribute('data-scope'); cache.scopeChips = null; renderScopes(state); });
+  function updateOptPin() { $('optRow').classList.toggle('pinned', scope !== 'all' || mode !== 'supplement' || interrupt || !!$('dirText').value.trim()); }
+  $('scopeChips').addEventListener('click', function (ev) { var c = ev.target.closest('.selchip'); if (!c) return; scope = c.getAttribute('data-scope'); cache.scopeChips = null; renderScopes(state); updateOptPin(); });
   function renderModeChip() { $('modeChip').textContent = t(mode); $('modeChip').classList.toggle('on', mode === 'override'); }
-  $('modeChip').onclick = function () { mode = mode === 'supplement' ? 'override' : 'supplement'; renderModeChip(); };
-  $('intChip').onclick = function () { interrupt = !interrupt; $('intChip').classList.toggle('on', interrupt); $('dirHint').textContent = t(interrupt ? 'Aborts the current turn and re-delivers immediately.' : 'Lands at the next turn boundary, with a delivery receipt.'); };
-  function send() { var v = $('dirText').value.trim(); if (!v) return; post('/api/directive', { scope: scope, mode: mode, text: v, interrupt: interrupt }).then(function () { $('dirText').value = ''; $('dirText').style.height = 'auto'; interrupt = false; $('intChip').classList.remove('on'); $('dirHint').textContent = t('Lands at the next turn boundary, with a delivery receipt.'); }); }
+  $('modeChip').onclick = function () { mode = mode === 'supplement' ? 'override' : 'supplement'; renderModeChip(); updateOptPin(); };
+  $('intChip').onclick = function () { interrupt = !interrupt; $('intChip').classList.toggle('on', interrupt); updateOptPin(); $('dirHint').textContent = t(interrupt ? 'Aborts the current turn and re-delivers immediately.' : 'Lands at the next turn boundary, with a delivery receipt.'); };
+  function send() { var v = $('dirText').value.trim(); if (!v) return; post('/api/directive', { scope: scope, mode: mode, text: v, interrupt: interrupt }).then(function () { $('dirText').value = ''; $('dirText').style.height = 'auto'; interrupt = false; $('intChip').classList.remove('on'); updateOptPin(); $('dirHint').textContent = t('Lands at the next turn boundary, with a delivery receipt.'); }); }
   $('sendBtn').onclick = send;
-  $('dirText').addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 150) + 'px'; });
+  $('dirText').addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 150) + 'px'; updateOptPin(); });
   $('dirText').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.isComposing) { e.preventDefault(); send(); } });
   $('pauseBtn').onclick = function () { post('/api/run-pause', { paused: !(state && state.status === 'paused') }); };
   $('noiseChip').onclick = function () { showNoise = !showNoise; $('noiseChip').textContent = t(showNoise ? 'hide steps' : 'show steps'); [].forEach.call(document.querySelectorAll('.steps'), function (s) { s.open = showNoise; }); };
-  $('langBtn').onclick = function () { lang = lang === 'zh' ? 'en' : 'zh'; localStorage.setItem('pitwall-lang', lang); cache = {}; applyStatic(); if (state) renderState(state); rebuildConv(); loadRuns(); };
+  // ---- account menu: appearance, language, links (kept off the main chrome)
+  function switchLang(next) { lang = next; localStorage.setItem('pitwall-lang', lang); cache = {}; applyStatic(); if (state) renderState(state); rebuildConv(); loadRuns(); }
+  $('acctBtn').onclick = function (e) { e.stopPropagation(); document.body.classList.toggle('acct-open'); };
+  document.addEventListener('click', function (e) { if (!e.target.closest('#acctMenu') && !e.target.closest('#acctBtn')) document.body.classList.remove('acct-open'); });
+  $('themeSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; localStorage.setItem('pitwall-theme', b.getAttribute('data-theme')); applyTheme(); drawSpark(); });
+  $('langSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; var l = b.getAttribute('data-lang'); if (l !== lang) switchLang(l); });
 
   // ---- state + boot
   var refetch = null;
@@ -835,14 +897,16 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   if (sp.get('side') === 'collapsed' || (sp.get('side') !== 'expanded' && localStorage.getItem('pitwall-side') === '1')) document.body.classList.add('side-off');
   if (sp.get('rail') === 'collapsed' || localStorage.getItem('pitwall-rail') === '1') document.body.classList.add('rail-off');
   applyStatic(); loadRuns(); drawSpark();
+  if (sp.get('menu')) document.body.classList.add('acct-open');
   setInterval(loadRuns, 30000);
   setInterval(function () { if (state) renderTop(state); }, 30000);
   fetch(api('/api/state')).then(function (r) { return r.json(); }).then(function (s) {
+    if (!s || !s.runId) { $('goal').textContent = ''; $('conv').innerHTML = '<div class="empty" style="padding:40px 0">' + (lang === 'zh' ? '从左侧选择一个运行，或用 pitwall run 启动一个。' : 'Pick a run from the sidebar, or start one with pitwall run.') + '</div>'; return; }
     renderState(s);
     if (sp.get('snapshot')) { fetch(api('/api/events?since=0')).then(function (r) { return r.json(); }).then(function (evs) { evs.forEach(function (env) { allEvents.push(env); appendEvent(env); }); }); return; }
     var es = new EventSource(api('/api/stream?since=0'));
     es.onmessage = function (m) { var env = JSON.parse(m.data); allEvents.push(env); appendEvent(env); scheduleRefetch(); };
-  });
+  }).catch(function () { $('conv').innerHTML = '<div class="empty" style="padding:40px 0">' + (lang === 'zh' ? '无法加载该运行。' : 'Could not load this run.') + '</div>'; });
 })();
 </script>
 </body>
