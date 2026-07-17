@@ -49,8 +49,11 @@ Full details in the research notes; the shape of the market:
   of locally-installed CLIs, under the user's own login, is the defensible
   posture.
 
-Conclusion: the gap this project occupies is **"heterogeneous agents, one
-repository, one authoritative human console, recoverable by design."**
+Conclusion: Pitwall is an **Agentic Development Environment for teams of
+agents** — heterogeneous agents, one repository, the human at the pit wall.
+The gap it occupies: no other open environment lets agents from different
+vendors truly collaborate on one task under human supervision, recoverable
+by design.
 
 ## 3. Load-bearing abstractions
 

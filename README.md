@@ -1,14 +1,17 @@
 # Pitwall
 
-**The pit wall for your AI coding agents. Agents drive — you make the calls.**
+**An Agentic Development Environment (ADE) for teams of agents. Agents drive — you make the calls.**
 
-In Formula 1, drivers drive; the team watches telemetry from the pit wall,
-talks to them over team radio, and makes the strategy calls. Pitwall gives
-you that seat for heterogeneous coding agents working the same repository:
-Claude Code and Codex plan, build and review each other's work, while you
-watch one live timeline, radio in corrections mid-flight, and hold the only
-gate that ships anything. Kill the process at any moment; `pitwall resume`
-continues exactly where the ledger left off.
+Most ADEs put one agent next to you and keep you in the loop for every step.
+Pitwall is the environment for the next posture: **multiple coding agents from
+different vendors working the same repository as a team** — planning, building
+and reviewing each other's work autonomously — while you sit at the pit wall:
+watching one live timeline, radioing in corrections mid-flight, and holding
+the few gates that actually need a human. In Formula 1, drivers drive; the
+team watches telemetry and makes the strategy calls. That seat is this product.
+
+Kill the process at any moment; `pitwall resume` continues exactly where it
+left off — recoverability is table stakes for an environment agents live in.
 
 - **Console** — a minimal, bilingual (中文/EN) web workspace: every run in
   the sidebar, the agents' dialogue as the document, machine noise folded
@@ -20,15 +23,17 @@ continues exactly where the ledger left off.
 ## Why
 
 Running several coding agents in parallel worktrees is a solved problem
-(claude-squad, Vibe Kanban, Conductor, …). What no open tool does is let
-agents from **different vendors work the same task** — with division of
-labor, handoffs, objections and acceptance — while the human keeps one
-authoritative, recoverable view. Pitwall is built around three commitments:
+(claude-squad, Vibe Kanban, Conductor, …), and single-agent ADEs are getting
+excellent. What no open environment does is let agents from **different
+vendors work the same task as a team** — with division of labor, handoffs,
+objections and acceptance — while the human supervises instead of operating.
+Pitwall is built around three commitments:
 
-1. **The ledger is the product.** A run is an append-only event log with
-   system-generated timestamps and provenance on every event. The console,
-   the CLI, task state and crash recovery are all projections of it. Agents
-   never write their own clock, and never rewrite their own audit trail.
+1. **The environment outlives any process.** A run is an append-only event
+   ledger with system-generated timestamps and provenance on every event —
+   the console, the CLI, task state and crash recovery are all projections of
+   it. That's the foundation, not the product: it's what makes the
+   environment resumable, inspectable and honest.
 2. **Self-check is never acceptance.** Work claimed done goes to an
    independent reviewer agent from another vendor, judged against explicit
    completion criteria; the final gate is always human.
