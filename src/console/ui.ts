@@ -1,14 +1,3 @@
-/**
- * The Pitwall console — one self-contained page, zero external assets.
- *
- * Design: paper-minimal (Notion/Manus lineage). Light by default, dark via
- * prefers-color-scheme. One centered reading column; the agents' dialogue is
- * the document; machine noise folds into one-line gray steps; chrome stays
- * out of the way. Bilingual (zh/en), toggle in the header, persisted.
- *
- * Client JS avoids template literals (the page lives inside one backtick
- * string); backtick characters are built via String.fromCharCode(96).
- */
 export const UI_HTML = String.raw`<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -18,159 +7,179 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23888' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='%23888'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #FBFBFA; --surface: #FFFFFF; --ink: #1C1C1B; --ink2: #71716D; --ink3: #A8A8A3;
-    --line: #ECECE9; --line2: #DEDEDA;
-    --ok: #1E9E6A; --warn: #C98A0B; --bad: #D9536F; --run: #1E9E6A;
-    --codebg: #F4F4F2;
+    --bg: #FAF9F7; --surface: #FFFFFF; --raise: #FFFFFF;
+    --ink: #37352F; --ink2: rgba(55,53,47,.62); --ink3: rgba(55,53,47,.40);
+    --line: rgba(55,53,47,.085); --line2: rgba(55,53,47,.15); --hair: rgba(55,53,47,.06);
+    --fill: rgba(55,53,47,.045); --fill2: rgba(55,53,47,.08);
+    --blue: #0B7CE0; --blue-fill: rgba(11,124,224,.10); --blue-line: rgba(11,124,224,.32);
+    --ok: #2E9E64; --warn: #BE8412; --bad: #D64C63;
+    --codebg: #F4F3F0;
+    --shadow: 0 1px 2px rgba(15,15,15,.04), 0 8px 28px -14px rgba(15,15,15,.14);
+    --pop: 0 0 0 1px rgba(15,15,15,.05), 0 4px 12px rgba(15,15,15,.10), 0 12px 32px -8px rgba(15,15,15,.18);
     --ease: cubic-bezier(.25,.6,.2,1);
-    --font: ui-sans-serif, -apple-system, "SF Pro Text", "PingFang SC", "Segoe UI", "Microsoft YaHei", sans-serif;
-    --mono: ui-monospace, "SF Mono", "Cascadia Code", "PingFang SC", monospace;
+    --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, monospace;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #191918; --surface: #202020; --ink: #EDEDEB; --ink2: #9B9B97; --ink3: #6B6B67;
-      --line: #2C2C2A; --line2: #3A3A37; --codebg: #242423;
+    :root:not([data-theme="light"]) {
+      --bg: #191918; --surface: #201F1E; --raise: #262523;
+      --ink: rgba(255,255,255,.83); --ink2: rgba(255,255,255,.55); --ink3: rgba(255,255,255,.36);
+      --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.15); --hair: rgba(255,255,255,.06);
+      --fill: rgba(255,255,255,.05); --fill2: rgba(255,255,255,.09);
+      --blue: #4C9DEB; --blue-fill: rgba(76,157,235,.15); --blue-line: rgba(76,157,235,.38);
+      --ok: #43B87C; --warn: #D6A03A; --bad: #E8697F;
+      --codebg: #242321;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.5);
+      --pop: 0 0 0 1px rgba(255,255,255,.08), 0 8px 30px rgba(0,0,0,.5);
+      color-scheme: dark;
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #191918; --surface: #201F1E; --raise: #262523;
+    --ink: rgba(255,255,255,.83); --ink2: rgba(255,255,255,.55); --ink3: rgba(255,255,255,.36);
+    --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.15); --hair: rgba(255,255,255,.06);
+    --fill: rgba(255,255,255,.05); --fill2: rgba(255,255,255,.09);
+    --blue: #4C9DEB; --blue-fill: rgba(76,157,235,.15); --blue-line: rgba(76,157,235,.38);
+    --ok: #43B87C; --warn: #D6A03A; --bad: #E8697F;
+    --codebg: #242321;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.5);
+    --pop: 0 0 0 1px rgba(255,255,255,.08), 0 8px 30px rgba(0,0,0,.5);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html { background: var(--bg); }
-  body { margin: 0; color: var(--ink); font: 15px/1.7 var(--font); -webkit-font-smoothing: antialiased; min-height: 100dvh; }
-  ::selection { background: rgba(110,110,220,.18); }
-  a { color: inherit; }
+  body { margin: 0; color: var(--ink); font: 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; min-height: 100dvh; }
+  ::selection { background: var(--blue-fill); }
+  a { color: inherit; text-decoration: none; }
   button { font: inherit; cursor: pointer; background: none; border: none; color: inherit; padding: 0; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink3); background-clip: padding-box; }
 
-  /* ---------- sidebar ---------- */
-  .side { position: fixed; top: 52px; bottom: 0; left: 0; width: 240px; overflow-y: auto;
-    border-right: 1px solid var(--line); padding: 16px 10px 12px; background: var(--bg);
-    display: flex; flex-direction: column; z-index: 30; }
-  .side .sh { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink3); font-weight: 650; padding: 0 8px 10px; }
-  .runrow { display: block; width: 100%; text-align: left; padding: 8px 9px; border-radius: 9px; margin-bottom: 2px;
-    transition: background .25s var(--ease); }
-  .runrow:hover { background: var(--line); }
-  .runrow.cur { background: var(--line); }
-  .runrow .g { font-size: 12.5px; line-height: 1.45; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .runrow.done-run .g { color: var(--ink2); }
-  .runrow .m { display: flex; align-items: center; gap: 6px; margin-top: 4px; font: 10.5px var(--mono); color: var(--ink3); }
-  .side .foot { margin-top: auto; padding: 12px 8px 4px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink2);
-    display: flex; align-items: center; gap: 8px; }
-  .side .foot .idot { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--bg);
-    display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 650; }
-  .side .foot a { color: var(--ink3); text-decoration: none; margin-left: auto; font-size: 11px; }
-  .side .foot a:hover { color: var(--ink); }
-  .main { margin-left: 240px; }
-  @media (max-width: 1000px) {
-    .side { transform: translateX(-100%); transition: transform .35s var(--ease); }
-    .side.open { transform: none; box-shadow: 0 0 60px rgba(0,0,0,.15); }
-    .main { margin-left: 0; }
+  /* ---------------- signals: one blue jewel, amber = you, green = live/done ---------------- */
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink3); flex: none; }
+  .dot.running, .dot.working { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: pulse 2.4s var(--ease) infinite; }
+  .dot.paused, .dot.awaiting-review, .dot.needs-review { background: var(--warn); }
+  .dot.done, .dot.accepted { background: var(--ok); }
+  .dot.failed, .dot.dead { background: var(--bad); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--blue-fill); } 70% { box-shadow: 0 0 0 5px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  .shimmer { background: linear-gradient(100deg, var(--ink2) 30%, var(--ink3) 48%, var(--ink) 58%, var(--ink2) 72%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; animation: shimmer 2.6s linear infinite; }
+  @keyframes shimmer { 0% { background-position: 160% 0; } 100% { background-position: -160% 0; } }
+
+  /* ---------------- header ---------------- */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 46px;
+    display: flex; align-items: center; gap: 8px; padding: 0 14px 0 16px;
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: saturate(1.4) blur(16px); -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    border-bottom: 1px solid var(--hair);
   }
-  .menubtn { display: none; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 640; font-size: 14px; letter-spacing: -.01em; }
+  .brand .mark { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--ink); position: relative; }
+  .brand .mark::after { content: ""; position: absolute; inset: 3.4px; border-radius: 50%; background: var(--ink); }
+  .crumb { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink2); margin-left: 6px; min-width: 0; }
+  .crumb .csep { color: var(--line2); }
+  .crumb .g { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header .sp { flex: 1; }
+  .hbtn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12.5px; color: var(--ink2); padding: 5px 9px; border-radius: 7px; transition: background .12s var(--ease), color .12s var(--ease); }
+  .hbtn:hover { background: var(--fill2); color: var(--ink); }
+  .icobtn { width: 30px; height: 30px; padding: 0; font-size: 14px; }
+  .runid { font: 11px var(--mono); color: var(--ink3); }
+  @media (max-width: 760px) { .runid, .crumb { display: none; } }
+  .menubtn, .railbtn { display: none; }
+  @media (max-width: 1180px) { .railbtn { display: inline-flex; } }
   @media (max-width: 1000px) { .menubtn { display: inline-flex; } }
 
-  /* ---------- header ---------- */
-  header {
-    position: sticky; top: 0; z-index: 50; height: 52px;
-    display: flex; align-items: center; gap: 10px; padding: 0 20px;
-    background: color-mix(in srgb, var(--bg) 82%, transparent);
-    backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
+  /* ---------------- sidebar: run workspace ---------------- */
+  .side { position: fixed; top: 46px; bottom: 0; left: 0; width: 240px; overflow-y: auto; overscroll-behavior: contain;
+    border-right: 1px solid var(--hair); padding: 10px 8px 12px; background: var(--bg);
+    display: flex; flex-direction: column; z-index: 40; }
+  .newrun { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; border-radius: 9px; color: var(--ink2); font-size: 13px; transition: background .12s var(--ease); margin-bottom: 6px; }
+  .newrun:hover { background: var(--fill2); color: var(--ink); }
+  .newrun svg { width: 15px; height: 15px; }
+  .grp { padding: 14px 10px 6px; font-size: 11px; letter-spacing: .06em; color: var(--ink3); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .grp .cnt { color: var(--ink3); font-weight: 500; }
+  .grp.you { color: var(--warn); }
+  .runrow { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 9px; margin-bottom: 1px; transition: background .12s var(--ease); position: relative; }
+  .runrow:hover { background: var(--fill); }
+  .runrow.cur { background: var(--fill2); }
+  .runrow .g { font-size: 13px; line-height: 1.4; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 450; }
+  .runrow.done-run .g { color: var(--ink2); font-weight: 400; }
+  .runrow .m { display: flex; align-items: center; gap: 6px; margin-top: 5px; font: 11px var(--mono); color: var(--ink3); }
+  .runrow .m .badge-you { color: var(--warn); font-weight: 600; font-family: var(--font); letter-spacing: 0; }
+  .runrow .m .prog { margin-left: auto; }
+  .empty { padding: 20px 12px; color: var(--ink3); font-size: 12.5px; line-height: 1.6; }
+  .side .foot { margin-top: auto; padding: 12px 10px 4px; border-top: 1px solid var(--hair); font-size: 12px; color: var(--ink2); display: flex; align-items: center; gap: 8px; }
+  .side .foot .idot { width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--bg); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 650; }
+  .side .foot a { color: var(--ink3); margin-left: auto; font-size: 11px; }
+  .side .foot a:hover { color: var(--ink); }
+
+  /* ---------------- layout frame ---------------- */
+  .main { margin: 46px 320px 0 240px; min-height: calc(100dvh - 46px); }
+  .rail { position: fixed; top: 46px; bottom: 0; right: 0; width: 320px; overflow-y: auto; overscroll-behavior: contain;
+    border-left: 1px solid var(--hair); padding: 20px 18px 40px; background: var(--bg); z-index: 40; }
+  @media (max-width: 1180px) {
+    .main { margin-right: 0; }
+    .rail { transform: translateX(100%); transition: transform .3s var(--ease); box-shadow: none; width: 340px; }
+    .rail.open { transform: none; box-shadow: -8px 0 50px rgba(0,0,0,.16); }
   }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 650; font-size: 14px; letter-spacing: -.01em; }
-  .brand .mark { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--ink); position: relative; }
-  .brand .mark::after { content: ""; position: absolute; inset: 3.5px; border-radius: 50%; background: var(--ink); }
-  .hstatus { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink2); margin-left: 4px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink3); flex: none; }
-  .dot.running { background: var(--run); animation: breathe 2.2s var(--ease) infinite; }
-  .dot.paused, .dot.awaiting-review { background: var(--warn); }
-  .dot.done { background: var(--ink); }
-  .dot.failed { background: var(--bad); }
-  @keyframes breathe { 50% { opacity: .35; } }
-  header .sp { flex: 1; }
-  .hbtn { font-size: 12.5px; color: var(--ink2); padding: 5px 10px; border-radius: 7px; transition: background .3s var(--ease), color .3s var(--ease); }
-  .hbtn:hover { background: var(--line); color: var(--ink); }
-  .runid { font: 11px var(--mono); color: var(--ink3); }
-  @media (max-width: 700px) { .runid { display: none; } }
+  @media (max-width: 1000px) {
+    .side { transform: translateX(-100%); transition: transform .3s var(--ease); }
+    .side.open { transform: none; box-shadow: 8px 0 50px rgba(0,0,0,.16); }
+    .main { margin-left: 0; }
+  }
 
-  /* ---------- document column ---------- */
-  .doc { max-width: 720px; margin: 0 auto; padding: 56px 24px 180px; }
-  .kicker { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink3); font-weight: 600; display: flex; align-items: center; gap: 8px; }
-  h1.title { font-size: 28px; line-height: 1.35; font-weight: 700; letter-spacing: -.02em; margin: 10px 0 0; }
-  .metaline { margin-top: 14px; font-size: 13px; color: var(--ink2); display: flex; flex-wrap: wrap; gap: 6px 0; align-items: center; }
+  /* ---------------- document column ---------------- */
+  .doc { max-width: 720px; margin: 0 auto; padding: 40px 32px 200px; }
+  .kicker { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink3); font-weight: 600; display: flex; align-items: center; gap: 8px; height: 16px; }
+  h1.title { font-size: 22px; line-height: 1.34; font-weight: 660; letter-spacing: -.018em; margin: 12px 0 0; }
+  .metaline { margin-top: 14px; font-size: 12.5px; color: var(--ink2); display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
   .metaline .sep { margin: 0 9px; color: var(--line2); }
-  .progress { margin-top: 20px; height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
-  .progress .fill { height: 100%; background: var(--ink); border-radius: 1px; transition: width 1s var(--ease); }
+  .metaline .cp { cursor: pointer; border-radius: 5px; padding: 1px 5px; transition: background .12s; }
+  .metaline .cp:hover { background: var(--fill2); }
 
-  /* agents line */
-  .agents { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 4px 26px; font-size: 13px; color: var(--ink2); }
-  .agentrow { display: inline-flex; align-items: center; gap: 8px; padding: 3px 0; }
-  .agentrow b { color: var(--ink); font-weight: 600; }
-  .agentrow .acts { display: none; gap: 2px; }
-  .agentrow:hover .acts { display: inline-flex; }
-  .lbtn { font-size: 11.5px; color: var(--ink3); padding: 2px 7px; border-radius: 6px; }
-  .lbtn:hover { background: var(--line); color: var(--ink); }
-  .lbtn.bad:hover { color: var(--bad); }
-
-  /* criteria */
-  .criteria { margin: 26px 0 0; padding: 0; list-style: none; }
-  .criteria li { position: relative; padding: 3px 0 3px 26px; font-size: 13.5px; color: var(--ink2); }
-  .criteria li::before { content: ""; position: absolute; left: 4px; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--line2); }
-
-  /* ---------- decision callout ---------- */
-  .decision { margin: 34px 0 0; border: 1px solid var(--line2); border-radius: 14px; padding: 18px 20px; background: var(--surface); animation: fadein .6s var(--ease) both; }
-  .decision .k { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--warn); font-weight: 650; }
-  .decision .s { font-size: 14.5px; font-weight: 550; margin-top: 6px; line-height: 1.6; }
-  .decision input[type=text] { width: 100%; margin-top: 12px; border: none; border-bottom: 1px solid var(--line2); background: none; padding: 6px 0; font: 13.5px var(--font); color: var(--ink); outline: none; transition: border-color .3s; }
-  .decision input[type=text]:focus { border-color: var(--ink2); }
-  .decision .acts { display: flex; gap: 10px; margin-top: 16px; }
-  .pbtn { background: var(--ink); color: var(--bg); border-radius: 999px; padding: 7px 20px; font-size: 13px; font-weight: 570; transition: opacity .3s var(--ease), transform .3s var(--ease); }
+  /* ---------------- decision gate (center, prominent) ---------------- */
+  .decision { margin: 30px 0 0; border: 1px solid var(--line2); border-radius: 14px; padding: 18px 20px; background: var(--surface); box-shadow: var(--shadow); animation: rise .5s var(--ease) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .decision .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--warn); font-weight: 680; display: flex; align-items: center; gap: 7px; }
+  .decision .k::before { content: ""; width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); background: var(--warn); }
+  .decision .s { font-size: 15px; font-weight: 520; margin-top: 8px; line-height: 1.55; }
+  .decision input[type=text] { width: 100%; margin-top: 14px; border: 1px solid var(--line2); border-radius: 9px; background: var(--bg); padding: 9px 11px; font: 13.5px var(--font); color: var(--ink); outline: none; transition: border-color .15s, box-shadow .15s; }
+  .decision input[type=text]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-fill); }
+  .decision .acts { display: flex; gap: 9px; margin-top: 14px; }
+  .pbtn { background: var(--ink); color: var(--bg); border-radius: 999px; padding: 8px 20px; font-size: 13px; font-weight: 560; transition: opacity .12s, transform .12s var(--ease); }
   .pbtn:hover { opacity: .85; } .pbtn:active { transform: scale(.97); }
-  .gbtn { border-radius: 999px; padding: 7px 16px; font-size: 13px; color: var(--ink2); border: 1px solid var(--line2); transition: all .3s var(--ease); }
+  .gbtn { border-radius: 999px; padding: 8px 16px; font-size: 13px; color: var(--ink2); border: 1px solid var(--line2); transition: color .15s, border-color .15s; }
   .gbtn:hover { color: var(--bad); border-color: var(--bad); }
-  details.d-more summary { cursor: pointer; font-size: 12px; color: var(--ink3); margin-top: 8px; list-style: none; }
-  details.d-more summary::before { content: "› "; }
-  details.d-more[open] summary::before { content: "⌄ "; }
+  details.d-more summary { cursor: pointer; font-size: 12px; color: var(--ink3); margin-top: 10px; list-style: none; }
+  details.d-more summary::-webkit-details-marker { display: none; }
+  details.d-more summary::before { content: "›"; display: inline-block; width: 12px; transition: transform .15s; }
+  details.d-more[open] summary::before { transform: rotate(90deg); }
   details.d-more pre { background: var(--codebg); border-radius: 10px; padding: 12px 14px; font: 12px/1.6 var(--mono); white-space: pre-wrap; max-height: 300px; overflow: auto; margin: 8px 0 0; }
 
-  /* ---------- tasks ---------- */
-  .sec { margin-top: 46px; }
-  .sec .h { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink3); font-weight: 650; margin-bottom: 12px; display: flex; align-items: baseline; gap: 8px; }
-  .sec .h .n { font-family: var(--mono); letter-spacing: 0; }
-  .tlist { border-top: 1px solid var(--line); }
-  .trow { border-bottom: 1px solid var(--line); padding: 11px 2px; cursor: pointer; transition: background .3s var(--ease); }
-  .trow:hover { background: color-mix(in srgb, var(--line) 36%, transparent); }
-  .trow .r1 { display: flex; align-items: center; gap: 12px; }
-  .tmark { width: 18px; height: 18px; flex: none; position: relative; }
-  .tmark svg { width: 18px; height: 18px; display: block; }
-  .trow .t { flex: 1; font-size: 14.5px; font-weight: 520; line-height: 1.55; }
-  .trow.done .t { color: var(--ink2); }
-  .trow .st { font-size: 12px; color: var(--ink3); flex: none; }
-  .trow .st.b { color: var(--run); } .trow .st.r { color: var(--warn); }
-  .trow .crit { display: none; margin: 8px 0 4px 30px; padding: 0; list-style: none; }
-  .trow.open .crit { display: block; }
-  .trow .crit li { font-size: 13px; color: var(--ink2); padding: 2px 0 2px 18px; position: relative; }
-  .trow .crit li::before { content: ""; position: absolute; left: 0; top: 10px; width: 7px; height: 7px; border-radius: 2px; border: 1px solid var(--line2); }
-  .trow.done .crit li::before { background: var(--ink3); border-color: var(--ink3); }
-  .tempty { padding: 18px 2px; color: var(--ink2); font-size: 13.5px; display: flex; align-items: center; gap: 10px; }
-  .spin { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--line2); border-top-color: var(--ink2); animation: spin 1s linear infinite; flex: none; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ---------- conversation ---------- */
-  .conv { margin-top: 10px; }
-  .msg { padding: 22px 0 6px; animation: fadein .55s var(--ease) both; }
-  @keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  .msg .head { display: flex; align-items: baseline; gap: 9px; }
-  .pfp { width: 24px; height: 24px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 650; align-self: center; }
+  /* ---------------- conversation ---------------- */
+  .convhead { margin: 34px 0 4px; display: flex; align-items: center; }
+  .convhead .h { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink3); font-weight: 600; }
+  .convhead .sp { flex: 1; }
+  .conv { margin-top: 4px; }
+  .msg { padding: 20px 0 4px; animation: fade .5s var(--ease) both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .msg .head { display: flex; align-items: center; gap: 9px; }
+  .pfp { width: 23px; height: 23px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 650; }
   .pfp.agent { background: var(--ink); color: var(--bg); }
-  .pfp.agent2 { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .pfp.agent2 { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line2); }
   .pfp.human { background: var(--warn); color: #fff; }
-  .msg .head .n { font-weight: 650; font-size: 14px; }
+  .msg .head .n { font-weight: 630; font-size: 13.5px; }
   .msg .head .r { font-size: 12px; color: var(--ink3); }
-  .msg .head .t { font: 11px var(--mono); color: var(--ink3); margin-left: auto; }
+  .msg .head .t { font: 11px var(--mono); color: var(--ink3); margin-left: auto; opacity: 0; transition: opacity .15s; }
+  .msg:hover .head .t { opacity: 1; }
   .badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line2); color: var(--ink2); }
-  .badge.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-  .badge.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
-  .badge.hm { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
-  .msg .body { margin: 8px 0 0 33px; font-size: 14.5px; line-height: 1.75; max-width: 64ch; }
-  .msg .body.rule { padding-left: 14px; border-left: 2px solid var(--line2); }
+  .badge.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 42%, transparent); }
+  .badge.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 42%, transparent); }
+  .badge.hm { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
+  .msg .body { margin: 8px 0 0 32px; font-size: 14.5px; line-height: 1.72; max-width: 62ch; }
+  .msg .body.rule { padding-left: 15px; border-left: 2px solid var(--line2); }
   .msg .body.rule.bad { border-left-color: color-mix(in srgb, var(--bad) 55%, transparent); }
   .msg .body.rule.ok { border-left-color: color-mix(in srgb, var(--ok) 55%, transparent); }
   .msg .body.rule.hm { border-left-color: color-mix(in srgb, var(--warn) 55%, transparent); }
@@ -179,72 +188,144 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .msg .body code { font: .9em var(--mono); background: var(--codebg); border-radius: 4px; padding: 1px 5px; }
   .msg .body pre code { background: none; padding: 0; }
   .msg .body ul { margin: 6px 0 10px; padding-left: 22px; } .msg .body li { margin: 2px 0; }
-  .verdictline { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12.5px; font-weight: 600; }
-  .verdictline.ok { color: var(--ok); } .verdictline.bad { color: var(--bad); }
-  details.m-more summary { cursor: pointer; font-size: 12px; color: var(--ink3); list-style: none; margin-top: 6px; }
-  details.m-more summary::before { content: "› "; }
-  details.m-more[open] summary::before { content: "⌄ "; }
+  .verdictline { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .verdictline.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+  .verdictline.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent); }
+  details.m-more summary { cursor: pointer; font-size: 12px; color: var(--ink3); list-style: none; margin-top: 8px; }
+  details.m-more summary::-webkit-details-marker { display: none; }
+  details.m-more summary::before { content: "›"; display: inline-block; width: 12px; transition: transform .15s; }
+  details.m-more[open] summary::before { transform: rotate(90deg); }
   details.m-more pre { background: var(--codebg); border-radius: 10px; padding: 12px; font: 12px/1.6 var(--mono); white-space: pre-wrap; max-height: 360px; overflow: auto; }
 
-  /* system dividers */
-  .sys { margin: 20px 0 0 33px; font-size: 12.5px; color: var(--ink3); animation: fadein .5s var(--ease) both; }
+  /* system lines */
+  .sys { margin: 18px 0 0 32px; font-size: 12.5px; color: var(--ink3); display: flex; align-items: baseline; gap: 8px; animation: fade .45s var(--ease) both; }
+  .sys::before { flex: none; }
   .sys b { color: var(--ink2); font-weight: 600; }
-  .sys.gate { color: var(--ink2); }
-  .sys.gate::before { content: "◆ "; color: var(--warn); }
-  .sys.ok::before { content: "✓ "; color: var(--ok); }
-  .sys.no::before { content: "✕ "; color: var(--bad); }
-  .sys.task::before { content: "○ "; color: var(--ink3); }
-  .sys.taskdone::before { content: "● "; color: var(--ink2); }
+  .sys.gate::before { content: "◆"; color: var(--warn); }
+  .sys.ok::before { content: "✓"; color: var(--ok); }
+  .sys.no::before { content: "✕"; color: var(--bad); }
+  .sys.task::before { content: "○"; color: var(--ink3); }
+  .sys.taskdone::before { content: "●"; color: var(--ok); }
 
   /* machine steps capsule */
-  .steps { margin: 18px 0 0 33px; animation: fadein .5s var(--ease) both; }
-  .steps summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
-    font: 12px var(--mono); color: var(--ink3); padding: 3px 0; transition: color .3s var(--ease); }
+  .steps { margin: 16px 0 0 32px; animation: fade .45s var(--ease) both; }
+  .steps summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font: 11.5px var(--mono); color: var(--ink3); padding: 3px 0; transition: color .12s; }
   .steps summary:hover { color: var(--ink2); }
   .steps summary::-webkit-details-marker { display: none; }
-  .steps summary .tick { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--line2); border-radius: 4px; position: relative; }
-  .steps[open] summary .tick { background: var(--line2); }
-  .steps .rows { margin: 8px 0 4px 3px; border-left: 1px solid var(--line); padding-left: 16px; }
+  .steps summary .chev { display: inline-block; width: 10px; transition: transform .15s; }
+  .steps[open] summary .chev { transform: rotate(90deg); }
+  .steps .rows { margin: 8px 0 4px 5px; border-left: 1px solid var(--line); padding-left: 14px; }
   .steps .row { font: 11.5px/1.7 var(--mono); color: var(--ink3); overflow-wrap: anywhere; padding: 1px 0; }
-  .steps .row b { color: var(--ink2); font-weight: 570; }
+  .steps .row b { color: var(--ink2); font-weight: 560; }
   .steps .row .fb { border: 1px solid var(--line2); border-radius: 5px; padding: 0 6px; margin-right: 4px; }
 
-  /* ---------- composer ---------- */
-  .composer { position: fixed; left: 240px; right: 0; bottom: 0; z-index: 40; padding: 12px 16px 22px;
-    background: linear-gradient(180deg, transparent, var(--bg) 38%); pointer-events: none; }
+  /* ---------------- right rail cards ---------------- */
+  .tele { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--surface); box-shadow: var(--shadow); }
+  .tele .ts { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 620; letter-spacing: -.01em; }
+  .tele .tsub { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+  .tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; margin-top: 16px; }
+  .tgrid .cell .l { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink3); font-weight: 600; }
+  .tgrid .cell .v { font-size: 17px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .tgrid .cell .v small { font-size: 11px; color: var(--ink3); font-weight: 500; }
+  .tbar { margin-top: 14px; height: 4px; border-radius: 4px; background: var(--fill2); overflow: hidden; }
+  .tbar > div { height: 100%; background: var(--ink); border-radius: 4px; transition: width .8s var(--ease); }
+
+  .rsec { margin-top: 26px; }
+  .rsec .rh { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); font-weight: 600; margin-bottom: 10px; display: flex; align-items: baseline; gap: 8px; }
+  .rsec .rh .n { font-family: var(--mono); letter-spacing: 0; margin-left: auto; }
+
+  /* tasks / plan */
+  .trow { padding: 9px 8px; border-radius: 9px; cursor: pointer; transition: background .12s; }
+  .trow:hover { background: var(--fill); }
+  .trow .r1 { display: flex; align-items: flex-start; gap: 10px; }
+  .tmark { width: 17px; height: 17px; flex: none; margin-top: 1px; }
+  .tmark svg { width: 17px; height: 17px; display: block; }
+  .trow .t { flex: 1; font-size: 13px; font-weight: 460; line-height: 1.5; }
+  .trow.done .t { color: var(--ink2); }
+  .trow.cur .t { font-weight: 560; }
+  .trow .crit { display: none; margin: 8px 0 2px 27px; padding: 0; list-style: none; }
+  .trow.open .crit { display: block; }
+  .trow .crit li { font-size: 12px; color: var(--ink2); padding: 2px 0 2px 15px; position: relative; line-height: 1.5; }
+  .trow .crit li::before { content: ""; position: absolute; left: 0; top: 8px; width: 6px; height: 6px; border-radius: 2px; border: 1px solid var(--line2); }
+  .trow.done .crit li::before { background: var(--ok); border-color: var(--ok); }
+  .tempty { padding: 4px 8px; color: var(--ink2); font-size: 12.5px; line-height: 1.6; display: flex; align-items: flex-start; gap: 9px; }
+  .spin { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--line2); border-top-color: var(--blue); animation: spin 1s linear infinite; flex: none; margin-top: 2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* agents */
+  .agentcard { padding: 10px 8px; border-radius: 9px; transition: background .12s; }
+  .agentcard:hover { background: var(--fill); }
+  .agentcard .top { display: flex; align-items: center; gap: 8px; }
+  .agentcard .pfp { width: 21px; height: 21px; font-size: 10px; }
+  .agentcard .nm { font-size: 13px; font-weight: 560; }
+  .agentcard .rl { font-size: 11.5px; color: var(--ink3); }
+  .agentcard .top .dot { margin-left: auto; }
+  .agentcard .mt { font: 11px var(--mono); color: var(--ink3); margin: 5px 0 0 29px; }
+  .agentcard .acts { display: none; gap: 2px; margin: 6px 0 0 27px; }
+  .agentcard:hover .acts { display: flex; }
+  .lbtn { font-size: 11px; color: var(--ink3); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); transition: color .12s, border-color .12s; }
+  .lbtn:hover { background: var(--fill2); color: var(--ink); }
+  .lbtn.bad:hover { color: var(--bad); border-color: var(--bad); }
+
+  /* criteria */
+  .criteria { margin: 0; padding: 0; list-style: none; }
+  .criteria li { position: relative; padding: 4px 0 4px 22px; font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
+  .criteria li::before { content: ""; position: absolute; left: 3px; top: 10px; width: 6px; height: 6px; border-radius: 2px; border: 1px solid var(--line2); }
+
+  /* changed files */
+  .frow { display: flex; align-items: center; gap: 8px; padding: 4px 0; font: 12px var(--mono); color: var(--ink2); }
+  .fkind { width: 15px; height: 15px; border-radius: 4px; flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: var(--font); }
+  .fkind.added { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+  .fkind.modified { background: var(--blue-fill); color: var(--blue); }
+  .fkind.deleted { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+  .frow .fp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+
+  /* ---------------- composer ---------------- */
+  .composer { position: fixed; left: 240px; right: 320px; bottom: 0; z-index: 45; padding: 14px 16px 20px; background: linear-gradient(180deg, transparent, var(--bg) 42%); pointer-events: none; }
+  @media (max-width: 1180px) { .composer { right: 0; } }
   @media (max-width: 1000px) { .composer { left: 0; } }
-  .composer .box { pointer-events: auto; max-width: 720px; margin: 0 auto; background: var(--surface);
-    border: 1px solid var(--line2); border-radius: 16px; padding: 12px 14px 10px;
-    box-shadow: 0 12px 40px -18px rgba(0,0,0,.18); transition: border-color .3s var(--ease); }
-  .composer .box:focus-within { border-color: var(--ink3); }
-  .composer textarea { width: 100%; border: none; background: none; outline: none; resize: none;
-    font: 14px/1.6 var(--font); color: var(--ink); max-height: 130px; min-height: 24px; }
-  .composer .row2 { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
-  .selchip { font-size: 12px; color: var(--ink3); padding: 3px 9px; border-radius: 7px; transition: all .25s var(--ease); white-space: nowrap; }
-  .selchip:hover { background: var(--line); color: var(--ink2); }
-  .selchip.on { color: var(--ink); background: var(--line); }
+  .composer .wrap { max-width: 720px; margin: 0 auto; padding: 0 32px; }
+  .composer .box { pointer-events: auto; background: var(--surface); border: 1px solid var(--line2); border-radius: 18px; padding: 12px 14px 9px; box-shadow: var(--shadow); transition: border-color .15s, box-shadow .15s; }
+  .composer .box:focus-within { border-color: var(--blue-line); box-shadow: 0 0 0 3px var(--blue-fill), var(--shadow); }
+  .composer textarea { width: 100%; border: none; background: none; outline: none; resize: none; font: 14px/1.55 var(--font); color: var(--ink); max-height: 160px; min-height: 22px; }
+  .composer textarea::placeholder { color: var(--ink3); }
+  .composer .row2 { display: flex; align-items: center; gap: 3px; margin-top: 8px; }
+  .selchip { font-size: 12px; color: var(--ink3); padding: 4px 9px; border-radius: 8px; transition: background .12s, color .12s; white-space: nowrap; }
+  .selchip:hover { background: var(--fill2); color: var(--ink2); }
+  .selchip.on { color: var(--ink); background: var(--fill2); }
   .selchip.warn.on { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  .chipdiv { width: 1px; height: 15px; background: var(--line2); margin: 0 5px; flex: none; }
   .composer .sp { flex: 1; }
-  .sendbtn { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg);
-    display: inline-flex; align-items: center; justify-content: center; transition: opacity .3s, transform .3s var(--ease); flex: none; }
+  .sendbtn { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg); display: inline-flex; align-items: center; justify-content: center; transition: opacity .12s, transform .12s var(--ease); flex: none; }
   .sendbtn:hover { opacity: .85; } .sendbtn:active { transform: scale(.94); }
+  .sendbtn:disabled { opacity: .3; cursor: default; }
   .sendbtn svg { width: 14px; height: 14px; }
-  .composer .note { max-width: 720px; margin: 7px auto 0; font-size: 11px; color: var(--ink3); padding: 0 4px; pointer-events: none; }
+  .composer .note { margin: 8px auto 0; max-width: 720px; padding: 0 34px; font-size: 11px; color: var(--ink3); pointer-events: none; }
+  .composer .ro { pointer-events: auto; max-width: 720px; margin: 0 auto; padding: 10px 14px; font-size: 12.5px; color: var(--ink3); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; display: flex; align-items: center; gap: 8px; }
+
+  /* ---------------- empty home ---------------- */
+  .home { max-width: 640px; margin: 0 auto; padding: 12vh 32px 40px; text-align: center; }
+  .home h2 { font-size: 24px; font-weight: 680; letter-spacing: -.02em; margin: 0; }
+  .home p { color: var(--ink2); font-size: 14px; margin: 12px 0 0; line-height: 1.7; }
+  .home .cmd { text-align: left; margin: 26px 0 0; background: var(--codebg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font: 12.5px/1.7 var(--mono); color: var(--ink2); overflow-x: auto; }
+  .home .cmd .c0 { color: var(--ink3); }
 </style>
 </head>
 <body>
 <header>
-  <button class="hbtn menubtn" id="menuBtn">☰</button>
+  <button class="hbtn icobtn menubtn" id="menuBtn" title="Runs">☰</button>
   <div class="brand"><span class="mark"></span>Pitwall</div>
-  <span class="hstatus"><span class="dot" id="hdot"></span><span id="hstatus"></span></span>
+  <span class="crumb" id="crumb"></span>
   <span class="sp"></span>
   <span class="runid" id="runid"></span>
+  <button class="hbtn icobtn" id="themeBtn" title="Theme">◐</button>
   <button class="hbtn" id="langBtn">EN</button>
   <button class="hbtn" id="pauseBtn"></button>
+  <button class="hbtn icobtn railbtn" id="railBtn" title="Panel">⊞</button>
 </header>
 
 <aside class="side" id="side">
-  <div class="sh" id="secRuns"></div>
+  <button class="newrun" id="newRun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span id="newRunLabel"></span></button>
   <div id="runlist"></div>
   <div class="foot">
     <span class="idot" id="ilabel">你</span><span id="identity"></span>
@@ -253,37 +334,44 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 </aside>
 
 <div class="main">
-<div class="doc">
+<div class="doc" id="doc">
   <p class="kicker" id="kicker"></p>
   <h1 class="title" id="goal"></h1>
   <div class="metaline" id="metaline"></div>
-  <div class="progress"><div class="fill" id="pfill" style="width:0%"></div></div>
-  <div class="agents" id="agents"></div>
-  <ol class="criteria" id="criteria"></ol>
   <div id="decisions"></div>
-  <div class="sec">
-    <div class="h"><span id="secTasks"></span><span class="n" id="taskCount"></span></div>
-    <div class="tlist" id="tlist"></div>
-  </div>
-  <div class="sec">
-    <div class="h"><span id="secRoom"></span><span style="flex:1"></span><button class="hbtn" id="noiseChip" style="font-size:11.5px; text-transform:none; letter-spacing:0"></button></div>
-    <div class="conv" id="conv"></div>
-  </div>
+  <div class="convhead"><span class="h" id="secRoom"></span><span class="sp"></span><button class="hbtn" id="noiseChip" style="font-size:11px; text-transform:none; letter-spacing:0; padding:3px 8px"></button></div>
+  <div class="conv" id="conv"></div>
 </div>
 </div>
 
-<div class="composer">
-  <div class="box">
-    <textarea id="dirText" rows="1"></textarea>
-    <div class="row2">
-      <span id="scopeChips"></span>
-      <span class="selchip" id="modeChip"></span>
-      <span class="selchip warn" id="intChip"></span>
-      <span class="sp"></span>
-      <button class="sendbtn" id="sendBtn" title="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
-    </div>
+<aside class="rail" id="rail">
+  <div class="tele">
+    <div class="ts"><span class="dot" id="hdot"></span><span id="teleState"></span></div>
+    <div class="tsub" id="teleSub"></div>
+    <div class="tgrid" id="teleGrid"></div>
+    <div class="tbar"><div id="pfill" style="width:0%"></div></div>
   </div>
-  <div class="note" id="dirHint"></div>
+  <div class="rsec"><div class="rh"><span id="secTasks"></span><span class="n" id="taskCount"></span></div><div id="tlist"></div></div>
+  <div class="rsec"><div class="rh" id="secAgents"></div><div id="agents"></div></div>
+  <div class="rsec" id="critSec"><div class="rh" id="secCrit"></div><ol class="criteria" id="criteria"></ol></div>
+  <div class="rsec" id="filesSec" style="display:none"><div class="rh"><span id="secFiles"></span><span class="n" id="fileCount"></span></div><div id="files"></div></div>
+</aside>
+
+<div class="composer" id="composer">
+  <div class="wrap">
+    <div class="box" id="cbox">
+      <textarea id="dirText" rows="1"></textarea>
+      <div class="row2">
+        <span id="scopeChips"></span>
+        <span class="chipdiv"></span>
+        <span class="selchip" id="modeChip"></span>
+        <span class="selchip warn" id="intChip"></span>
+        <span class="sp"></span>
+        <button class="sendbtn" id="sendBtn" title="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </div>
+    </div>
+    <div class="note" id="dirHint"></div>
+  </div>
 </div>
 
 <script>
@@ -297,39 +385,41 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   // ------------------------------------------------------------ i18n
   var ZH = {
-    'Pause': '暂停', 'Resume': '继续', 'Send': '发送',
+    'Pause': '暂停', 'Resume': '继续', 'Send': '发送', 'New run': '新建运行',
     'running': '运行中', 'paused': '已暂停', 'done': '已完成', 'failed': '失败', 'awaiting-review': '待验收',
     'team': '团队', 'pair': '结对',
     'idle': '空闲', 'working': '工作中', 'dead': '掉线', 'awaiting-approval': '等待批准',
     'director': '总监', 'engineer': '工程师', 'driver': '实现', 'reviewer': '评审',
     'plan': '计划', 'acceptance': '验收', 'task': '任务仲裁', 'tool': '操作',
-    'RUN COMPLETE': '运行完成', 'LIVE': '进行中', 'PAUSED': '已暂停', 'NEEDS YOU': '等你决定',
-    'Tasks': '任务', 'The room': '协作现场',
+    'Complete': '已完成', 'Live': '进行中', 'Paused': '已暂停', 'Needs you': '等你决定', 'Failed': '失败',
+    'Plan': '任务', 'Agents': '代理', 'Criteria': '验收标准', 'Changes': '文件变更', 'The room': '协作现场',
     'show steps': '显示执行细节', 'hide steps': '隐藏执行细节',
-    'tasks': '个任务', 'turns': '轮', 'elapsed': '耗时',
+    'tasks': '任务', 'turns': '轮', 'elapsed': '耗时', 'cost': '花费', 'tokens': 'Token',
     'planned': '待开工', 'building': '实现中', 'in review': '审核中', 'accepted': '已验收',
     'The director is studying the repository and drafting the plan…': '总监正在研究仓库、起草任务计划……',
-    'No tasks yet.': '还没有任务。',
+    'No tasks yet.': '尚无任务。', 'No agents yet.': '尚无代理。', 'No changes yet.': '尚无文件变更。', 'None set.': '未设定。',
     'You': '你', 'human': '人类',
     'objection': '驳回', 'verdict': '裁决', 'report': '汇报', 'handoff': '计划', 'question': '提问', 'info': '消息',
     'directive': '指令', 'note': '批注', 'goal update': '目标更新',
     'supplement': '补充', 'override': '覆盖', 'interrupt': '打断',
     'to all': '发给全体', 'to ': '发给 ',
-    'approved': '已批准', 'rejected': '已驳回', 'gate': '门',
+    'approved': '已批准', 'rejected': '已驳回',
     'run created': '运行创建', 'new task': '新任务', 'task update': '任务',
     'reports done': '自报完成', 'changes required': '需要修改', 'blocked': '受阻', 'approve': '通过',
-    'steps': '步', 'show full message': '展开完整消息', 'details': '详情', 'full prompt': '完整提示词',
-    'Note — say why if you reject': '备注——驳回请说明原因',
+    'steps': '步', 'show full message': '展开完整消息', 'details': '详情',
     'Approve': '通过', 'Reject': '驳回',
     'Add guidance, change direction, or overrule…': '补充指导、调整方向，或推翻先前口径……',
     'Lands at the next turn boundary, with a delivery receipt.': '将在下一轮次边界送达，留有送达回执。',
     'Aborts the current turn and re-delivers immediately.': '立即打断当前轮次并即时送达。',
     'delivery receipt': '送达回执', 'received directive': '已收到指令',
     'starts a turn': '开始新一轮', 'finished': '完成本轮', 'registered': '注册',
-    'accepted by human': '人类已验收', 'cost': '花费', 'Raw': '原始输出', 'Interrupt': '打断',
-    'run': '运行', 'status': '状态',
-    'Runs': '运行', 'Local · you': '本地 · 你', 'live': '在线',
-    'This run is read-only here — it is not driven by this process.': '当前为只读视图——该运行不由本进程驱动。',
+    'Raw': '原始输出', 'Interrupt': '打断',
+    'run': '运行', 'Runs': '运行', 'Local · you': '本地 · 你', 'live': '在线',
+    'Needs you': '等你决定', 'In progress': '进行中', 'Finished': '已结束',
+    'This run is read-only — it is not driven by this process.': '该运行为只读——不由本进程驱动，如需操作请用 pitwall resume。',
+    'Nothing running yet.': '暂无运行。',
+    'Start one from the terminal:': '在终端里启动一个：',
+    'copied': '已复制',
     'just now': '刚刚', 'm ago': ' 分钟前', 'h ago': ' 小时前', 'd ago': ' 天前'
   };
   var SYS = [
@@ -356,7 +446,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     [/^orchestrator process died mid-turn.*$/, '编排进程在轮次中途终止，将带恢复提示重发'],
     [/^agent turn failed.*$/, '代理轮次失败：检查错误后可补充指令并恢复'],
     [/^two consecutive turn timeouts.*$/, '连续两次轮次超时，需要人工介入'],
-    [/^recovered$/, '已恢复'], [/^paused by human$/, '被人类暂停'], [/^unpaused by human$/, '被人类恢复'],
+    [/^recovered$/, '已恢复'], [/^unpaused by human$/, '被人类恢复'],
     [/^driver reports done.*$/, '实现方自报完成，等待独立评审'],
     [/^engineer reports done.*$/, '工程师自报完成，等待总监审核']
   ];
@@ -388,7 +478,14 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
   function tstr(ts) { return new Date(ts).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' }); }
   function money(v) { return '$' + (v || 0).toFixed(2); }
-  function fmtTok(n) { return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1000 ? Math.round(n / 1000) + 'k' : String(n); }
+  function fmtTok(n) { return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
+  function ago(iso) {
+    var m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (m < 1) return t('just now');
+    if (m < 60) return m + t('m ago');
+    if (m < 1440) return Math.round(m / 60) + t('h ago');
+    return Math.round(m / 1440) + t('d ago');
+  }
 
   var htmlCache = {};
   function setHtml(id, html) {
@@ -396,6 +493,22 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     htmlCache[id] = html;
     el(id).innerHTML = html;
   }
+
+  // ------------------------------------------------------------ theme
+  function applyTheme() {
+    var urlT = new URLSearchParams(location.search).get('theme');
+    var m = (urlT === 'light' || urlT === 'dark' || urlT === 'auto') ? urlT : (localStorage.getItem('pitwall-theme') || 'auto');
+    var root = document.documentElement;
+    if (m === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', m);
+    el('themeBtn').textContent = m === 'light' ? '☀' : m === 'dark' ? '☾' : '◐';
+    el('themeBtn').title = m;
+  }
+  el('themeBtn').addEventListener('click', function () {
+    var order = ['auto', 'light', 'dark'];
+    var cur = localStorage.getItem('pitwall-theme') || 'auto';
+    localStorage.setItem('pitwall-theme', order[(order.indexOf(cur) + 1) % 3]);
+    applyTheme();
+  });
 
   // ------------------------------------------------------------ markdown-lite
   var FENCE_AGENTOS = new RegExp(BT + BT + BT + '(?:pitwall|agentos)\\s*\\n([\\s\\S]*?)' + BT + BT + BT, 'g');
@@ -443,12 +556,16 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
 
   // ------------------------------------------------------------ static text
+  var interrupt = false, mode = 'supplement';
   function applyStatic() {
     document.documentElement.lang = lang;
     el('langBtn').textContent = lang === 'zh' ? 'EN' : '中文';
-    el('secTasks').textContent = t('Tasks');
+    el('newRunLabel').textContent = t('New run');
     el('secRoom').textContent = t('The room');
-    el('secRuns').textContent = t('Runs');
+    el('secTasks').textContent = t('Plan');
+    el('secAgents').textContent = t('Agents');
+    el('secCrit').textContent = t('Criteria');
+    el('secFiles').textContent = t('Changes');
     el('identity').textContent = t('Local · you');
     el('ilabel').textContent = lang === 'zh' ? '你' : 'U';
     el('noiseChip').textContent = t(showNoise ? 'hide steps' : 'show steps');
@@ -458,24 +575,41 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     renderModeChip();
   }
 
-  // ------------------------------------------------------------ sidebar
-  function ago(iso) {
-    var m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-    if (m < 1) return t('just now');
-    if (m < 60) return m + t('m ago');
-    if (m < 1440) return Math.round(m / 60) + t('h ago');
-    return Math.round(m / 1440) + t('d ago');
+  // ------------------------------------------------------------ sidebar (grouped)
+  function runProg(r) {
+    if (r.tasksTotal) return r.tasksDone + '/' + r.tasksTotal;
+    return '';
+  }
+  function runRow(r, curId) {
+    var dot = r.live && r.status === 'running' ? 'running' : r.status;
+    var meta = [];
+    if (r.pending) meta.push('<span class="badge-you">' + (lang === 'zh' ? r.pending + ' 待办' : r.pending + ' pending') + '</span>');
+    else meta.push('<span class="dot ' + dot + '"></span>' + esc(t(r.status)) + (r.live && r.status === 'running' ? ' · ' + t('live') : ''));
+    var right = runProg(r) || (r.costUsd ? money(r.costUsd) : ago(r.createdAt));
+    return '<button class="runrow' + (r.runId === curId ? ' cur' : '') + (r.status === 'done' || r.status === 'failed' ? ' done-run' : '') + '" data-run="' + esc(r.runId) + '">'
+      + '<span class="g">' + esc(r.goal || r.runId) + '</span>'
+      + '<span class="m">' + meta.join('') + '<span class="prog">' + esc(right) + '</span></span>'
+      + '</button>';
   }
   function renderRuns(list) {
     var curId = state ? state.runId : RUN;
-    setHtml('runlist', list.map(function (r) {
-      var dot = r.live && r.status === 'running' ? 'running' : r.status;
-      var extra = r.live && r.status === 'running' ? ' · ' + t('live') : '';
-      return '<button class="runrow' + (r.runId === curId ? ' cur' : '') + (r.status === 'done' ? ' done-run' : '') + '" data-run="' + esc(r.runId) + '">'
-        + '<span class="g">' + esc(r.goal || r.runId) + '</span>'
-        + '<span class="m"><span class="dot ' + dot + '"></span>' + esc(t(r.status)) + extra + ' · ' + esc(ago(r.createdAt)) + '</span>'
-        + '</button>';
-    }).join(''));
+    if (!list.length) { setHtml('runlist', '<div class="empty">' + t('Nothing running yet.') + '</div>'); return; }
+    var you = [], live = [], fin = [];
+    list.forEach(function (r) {
+      if (r.pending || r.status === 'awaiting-review') you.push(r);
+      else if (r.status === 'done' || r.status === 'failed') fin.push(r);
+      else live.push(r);
+    });
+    var html = '';
+    function grp(cls, label, arr) {
+      if (!arr.length) return '';
+      return '<div class="grp ' + cls + '">' + esc(label) + '<span class="cnt">' + arr.length + '</span></div>'
+        + arr.map(function (r) { return runRow(r, curId); }).join('');
+    }
+    html += grp('you', t('Needs you'), you);
+    html += grp('', t('In progress'), live);
+    html += grp('', t('Finished'), fin);
+    setHtml('runlist', html);
   }
   function loadRuns() {
     fetch('/api/runs').then(function (r) { return r.json(); }).then(renderRuns).catch(function () {});
@@ -487,29 +621,51 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     location.href = '/' + q;
   });
   el('menuBtn').addEventListener('click', function () { el('side').classList.toggle('open'); });
+  el('railBtn').addEventListener('click', function () { el('rail').classList.toggle('open'); });
+  el('newRun').addEventListener('click', function () {
+    var cmd = 'pitwall run --repo <path> --goal "…" --criteria "…"';
+    if (navigator.clipboard) navigator.clipboard.writeText(cmd);
+    alert(lang === 'zh' ? '在终端启动新运行（命令已复制到剪贴板）：\n\n' + cmd : 'Start a new run from your terminal (command copied):\n\n' + cmd);
+  });
 
-  // ------------------------------------------------------------ header/meta
+  // ------------------------------------------------------------ header + telemetry + rail
+  function gateLabel(g) { return lang === 'zh' ? t(g) + '门' : g + ' gate'; }
+  function activeTasks(s) {
+    return s.tasks.filter(function (x) { return x.status !== 'superseded' && x.status !== 'rejected'; });
+  }
+  function copyable(text, label) {
+    return '<span class="cp" data-copy="' + esc(text) + '">' + esc(label) + '</span>';
+  }
   function renderTop(s) {
     var tasks = activeTasks(s);
     var done = tasks.filter(function (x) { return x.status === 'accepted'; }).length;
     var pend = s.approvals.filter(function (a) { return !a.decision; });
     var working = s.agents.filter(function (a) { return a.state === 'working'; });
+    var isWorking = working.length && s.status === 'running';
 
-    el('hdot').className = 'dot ' + s.status;
-    el('hstatus').textContent = t(s.status) + ' · ' + t(s.mode);
+    // header
+    el('hdot').className = 'dot ' + (isWorking ? 'working' : s.status);
+    setHtml('crumb', '<span class="g">' + esc(t(s.mode)) + '</span><span class="csep">·</span><span>' + esc(t(s.status)) + '</span>');
     el('runid').textContent = s.runId;
     el('pauseBtn').textContent = t(s.status === 'paused' ? 'Resume' : 'Pause');
     el('pauseBtn').style.display = s.readonly ? 'none' : '';
-    if (s.readonly) {
-      el('dirHint').textContent = t('This run is read-only here — it is not driven by this process.');
-      el('sendBtn').style.opacity = '.4';
-    }
     document.title = 'Pitwall — ' + t(s.status);
 
-    var kick = s.status === 'done' ? t('RUN COMPLETE') : pend.length ? t('NEEDS YOU') : s.status === 'paused' ? t('PAUSED') : t('LIVE');
-    var kdot = working.length && s.status === 'running' ? '<span class="dot running"></span>' : '';
+    // kicker + title
+    var kick = pend.length ? t('Needs you') : s.status === 'done' ? t('Complete') : s.status === 'failed' ? t('Failed')
+      : s.status === 'paused' ? t('Paused') : t('Live');
+    var kdot = isWorking ? '<span class="dot working"></span>' : '';
     setHtml('kicker', kdot + esc(kick));
     el('goal').textContent = s.goal;
+
+    // telemetry card
+    var stateWord = pend.length ? t('Needs you') : isWorking ? (working.map(function (a) { return a.name; }).join(', '))
+      : s.status === 'done' ? t('Complete') : s.status === 'failed' ? t('Failed') : s.status === 'paused' ? t('Paused') : t('Live');
+    el('teleState').className = isWorking ? 'shimmer' : '';
+    el('teleState').textContent = isWorking ? (lang === 'zh' ? stateWord + ' 工作中…' : stateWord + ' working…') : stateWord;
+    var subBits = [t(s.mode)];
+    if (s.statusReason) subBits.push(tSys(s.statusReason));
+    el('teleSub').textContent = subBits.join(' · ');
 
     var cost = 0, tok = 0, turns = 0;
     s.agents.forEach(function (a) { cost += a.totals.costUsd; tok += a.totals.inputTokens + a.totals.outputTokens; turns += a.totals.turns; });
@@ -517,54 +673,82 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var ended = (s.status === 'done' || s.status === 'failed') && s.lastTs ? new Date(s.lastTs).getTime() : Date.now();
     var mins = Math.max(0, Math.round((ended - started) / 60000));
     var dur = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' min';
-    var bits = [
-      done + ' / ' + tasks.length + ' ' + (lang === 'zh' ? '个任务' : 'tasks'),
-      money(cost) + ' · ' + fmtTok(tok) + ' tok',
-      turns + ' ' + t('turns'),
-      dur
-    ];
-    setHtml('metaline', bits.map(esc).join('<span class="sep">·</span>'));
-    el('pfill').style.width = (tasks.length ? Math.round(done / tasks.length * 100) : 0) + '%';
+    function cell(l, v, sub) { return '<div class="cell"><div class="l">' + esc(l) + '</div><div class="v">' + v + (sub ? ' <small>' + esc(sub) + '</small>' : '') + '</div></div>'; }
+    setHtml('teleGrid',
+      cell(t('cost'), esc(money(cost))) +
+      cell(t('tokens'), esc(fmtTok(tok))) +
+      cell(t('turns'), esc(String(turns))) +
+      cell(t('elapsed'), esc(dur)));
+    el('pfill').style.width = (tasks.length ? Math.round(done / tasks.length * 100) : (s.status === 'done' ? 100 : 0)) + '%';
 
-    setHtml('agents', s.agents.map(function (a, i) {
-      return '<span class="agentrow"><span class="dot ' + (a.state === 'working' ? 'running' : a.state === 'paused' ? 'paused' : '') + '"></span>'
-        + '<b>' + esc(a.name) + '</b> <span>' + esc(t(a.role)) + '</span>'
-        + '<span style="color:var(--ink3)">' + a.totals.turns + ' ' + t('turns') + ' · ' + (a.totals.costUsd ? money(a.totals.costUsd) : fmtTok(a.totals.inputTokens + a.totals.outputTokens) + ' tok') + '</span>'
-        + '<span class="acts">'
-        + (a.state === 'paused'
-            ? '<button class="lbtn" data-act="unpause" data-agent="' + esc(a.name) + '">' + t('Resume') + '</button>'
-            : '<button class="lbtn" data-act="pause" data-agent="' + esc(a.name) + '">' + t('Pause') + '</button>')
-        + (a.state === 'working' ? '<button class="lbtn bad" data-act="interrupt" data-agent="' + esc(a.name) + '">' + t('Interrupt') + '</button>' : '')
-        + '<button class="lbtn" data-act="raw" data-agent="' + esc(a.name) + '">' + t('Raw') + '</button>'
-        + '</span></span>';
-    }).join(''));
+    // meta line under title
+    setHtml('metaline',
+      copyable(s.runId, s.runId) + '<span class="sep">·</span>'
+      + esc(tasks.length ? done + ' / ' + tasks.length + ' ' + t('tasks') : t('tasks'))
+      + '<span class="sep">·</span>' + esc(money(cost)) + '<span class="sep">·</span>' + esc(dur));
 
-    setHtml('criteria', (s.criteria || []).map(function (c) { return '<li>' + esc(c) + '</li>'; }).join(''));
+    // agents (rail cards)
+    setHtml('agents', s.agents.length ? s.agents.map(function (a) {
+      var idx = agentIdx[a.name] || 0;
+      var st = a.state === 'working' ? 'working' : a.state === 'paused' ? 'paused' : a.state === 'dead' ? 'dead' : '';
+      return '<div class="agentcard">'
+        + '<div class="top"><span class="pfp ' + (idx === 0 ? 'agent' : 'agent2') + '">' + esc(String(a.name).charAt(0).toUpperCase()) + '</span>'
+        + '<span class="nm">' + esc(a.name) + '</span><span class="rl">' + esc(t(a.role)) + '</span><span class="dot ' + st + '"></span></div>'
+        + '<div class="mt">' + a.totals.turns + ' ' + t('turns') + ' · ' + (a.totals.costUsd ? money(a.totals.costUsd) : fmtTok(a.totals.inputTokens + a.totals.outputTokens) + ' tok') + '</div>'
+        + (s.readonly ? '' : '<div class="acts">'
+          + (a.state === 'paused'
+              ? '<button class="lbtn" data-act="unpause" data-agent="' + esc(a.name) + '">' + t('Resume') + '</button>'
+              : '<button class="lbtn" data-act="pause" data-agent="' + esc(a.name) + '">' + t('Pause') + '</button>')
+          + (a.state === 'working' ? '<button class="lbtn bad" data-act="interrupt" data-agent="' + esc(a.name) + '">' + t('Interrupt') + '</button>' : '')
+          + '<button class="lbtn" data-act="raw" data-agent="' + esc(a.name) + '">' + t('Raw') + '</button>'
+          + '</div>')
+        + '</div>';
+    }).join('') : '<div class="tempty">' + t('No agents yet.') + '</div>');
 
+    // criteria
+    setHtml('criteria', (s.criteria || []).length
+      ? s.criteria.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('')
+      : '<div class="tempty">' + t('None set.') + '</div>');
+
+    // changed files
+    var files = s.files || [];
+    el('filesSec').style.display = files.length ? '' : 'none';
+    if (files.length) {
+      el('fileCount').textContent = files.length;
+      setHtml('files', files.slice(-40).map(function (f) {
+        var k = f.kind || 'modified';
+        var letter = k === 'added' ? 'A' : k === 'deleted' ? 'D' : 'M';
+        return '<div class="frow"><span class="fkind ' + k + '">' + letter + '</span><span class="fp">' + esc(f.path) + '</span></div>';
+      }).join(''));
+    }
+
+    // decision gates (center)
     setHtml('decisions', pend.map(function (a) {
       return '<div class="decision">'
         + '<div class="k">' + esc(gateLabel(a.gate)) + '</div>'
         + '<div class="s">' + esc(tSys(a.summary)) + '</div>'
         + (a.detail ? '<details class="d-more"><summary>' + t('details') + '</summary><pre>' + esc(a.detail) + '</pre></details>' : '')
-        + '<input type="text" id="note-' + esc(a.approvalId) + '" placeholder="' + t('Note — say why if you reject') + '">'
+        + '<input type="text" id="note-' + esc(a.approvalId) + '" placeholder="' + (lang === 'zh' ? '备注——驳回请说明原因' : 'Note — say why if you reject') + '">'
         + '<div class="acts">'
         + '<button class="pbtn" data-appr="allow" data-id="' + esc(a.approvalId) + '">' + t('Approve') + '</button>'
         + '<button class="gbtn" data-appr="deny" data-id="' + esc(a.approvalId) + '">' + t('Reject') + '</button>'
         + '</div></div>';
     }).join(''));
+
+    // composer read-only handling
+    if (s.readonly) {
+      el('dirText').disabled = true;
+      el('sendBtn').disabled = true;
+      el('dirHint').textContent = t('This run is read-only — it is not driven by this process.');
+    }
   }
 
-  function gateLabel(g) { return lang === 'zh' ? t(g) + '门' : g + ' gate'; }
-  function activeTasks(s) {
-    return s.tasks.filter(function (x) { return x.status !== 'superseded' && x.status !== 'rejected'; });
-  }
-
-  // ------------------------------------------------------------ tasks
+  // ------------------------------------------------------------ tasks / plan
   var MARKS = {
-    pending: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="var(--line2)" stroke-width="1.6"/></svg>',
-    'in-progress': '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="var(--run)" stroke-width="1.6"/><circle cx="9" cy="9" r="3.4" fill="var(--run)"><animate attributeName="opacity" values="1;.3;1" dur="1.6s" repeatCount="indefinite"/></circle></svg>',
-    'needs-review': '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="var(--warn)" stroke-width="1.6"/><path d="M9 5.6v3.8l2.6 1.5" fill="none" stroke="var(--warn)" stroke-width="1.6" stroke-linecap="round"/></svg>',
-    accepted: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.6" fill="var(--ink)"/><path d="M5.8 9.2l2.2 2.2 4.2-4.6" fill="none" stroke="var(--bg)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    pending: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.6" fill="none" stroke="var(--line2)" stroke-width="1.5"/></svg>',
+    'in-progress': '<svg viewBox="0 0 18 18"><rect x="4.5" y="4.5" width="9" height="9" rx="2.2" transform="rotate(45 9 9)" fill="var(--blue)"><animate attributeName="opacity" values="1;.35;1" dur="1.8s" repeatCount="indefinite"/></rect></svg>',
+    'needs-review': '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.6" fill="none" stroke="var(--warn)" stroke-width="1.5"/><path d="M9 5.4v3.8l2.6 1.5" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    accepted: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.2" fill="var(--ok)"/><path d="M5.8 9.2l2.2 2.2 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   };
   var STAGE = { pending: 'planned', 'in-progress': 'building', 'needs-review': 'in review', accepted: 'accepted' };
   var openTasks = {};
@@ -580,11 +764,10 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     }
     setHtml('tlist', tasks.map(function (x) {
       var open = openTasks[x.taskId] ? ' open' : '';
-      var stCls = x.status === 'in-progress' ? ' b' : x.status === 'needs-review' ? ' r' : '';
-      return '<div class="trow' + (x.status === 'accepted' ? ' done' : '') + open + '" data-task="' + esc(x.taskId) + '">'
+      var cur = x.status === 'in-progress' ? ' cur' : '';
+      return '<div class="trow' + (x.status === 'accepted' ? ' done' : '') + cur + open + '" data-task="' + esc(x.taskId) + '">'
         + '<div class="r1"><span class="tmark">' + (MARKS[x.status] || MARKS.pending) + '</span>'
-        + '<span class="t">' + esc(x.title) + '</span>'
-        + '<span class="st' + stCls + '">' + esc(t(STAGE[x.status] || x.status)) + '</span></div>'
+        + '<span class="t">' + esc(x.title) + '</span></div>'
         + ((x.criteria || []).length ? '<ul class="crit">' + x.criteria.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>' : '')
         + '</div>';
     }).join(''));
@@ -598,7 +781,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   // ------------------------------------------------------------ conversation
   var curSteps = null;
-
   function roleOf(name) {
     if (!state) return '';
     var a = state.agents.filter(function (x) { return x.name === name; })[0];
@@ -609,7 +791,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var cls = (agentIdx[name] || 0) === 0 ? 'agent' : 'agent2';
     return '<span class="pfp ' + cls + '">' + esc(String(name).charAt(0).toUpperCase()) + '</span>';
   }
-
   function isPrimary(e) {
     switch (e.type) {
       case 'message': case 'directive': case 'note': case 'goal.updated':
@@ -619,14 +800,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       default: return false;
     }
   }
-
   function agentMessage(env) {
     var e = env.event;
     var isHuman = env.origin.kind === 'human';
     var name = isHuman ? t('You') : (e.from || 'system');
     var parsed = stripStructured(e.text);
-    var kindBadge = '';
-    var ruleCls = '';
+    var kindBadge = '', ruleCls = '';
     if (e.type === 'message') {
       if (e.kind === 'objection') { kindBadge = '<span class="badge bad">' + t('objection') + '</span>'; ruleCls = ' rule bad'; }
       else if (e.kind === 'verdict') { kindBadge = '<span class="badge ok">' + t('verdict') + '</span>'; ruleCls = ' rule ok'; }
@@ -655,7 +834,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       + '<span class="t">' + tstr(env.ts) + '</span>'
       + '</div><div class="body' + ruleCls + '">' + clipBody(e.text) + chip + '</div></div>';
   }
-
   function humanBlock(env) {
     var e = env.event;
     var label = e.type === 'directive'
@@ -668,9 +846,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       + '<span class="t">' + tstr(env.ts) + '</span>'
       + '</div><div class="body rule hm">' + md(e.text) + '</div></div>';
   }
-
   function sysLine(cls, html) { return '<div class="sys ' + cls + '">' + html + '</div>'; }
-
   function stepRow(env) {
     var e = env.event;
     switch (e.type) {
@@ -702,17 +878,15 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var agents = Object.keys(c.agents);
     return (agents.length ? agents.join(' + ') + ' · ' : '') + bits.join(' · ');
   }
-
   function appendEvent(env) {
     var e = env.event;
     var conv = el('conv');
-
     if (!isPrimary(e)) {
       if (!curSteps) {
         var d = document.createElement('details');
         d.className = 'steps';
         if (showNoise) d.open = true;
-        d.innerHTML = '<summary><span class="tick"></span><span class="cs"></span></summary><div class="rows"></div>';
+        d.innerHTML = '<summary><span class="chev">›</span><span class="cs"></span></summary><div class="rows"></div>';
         conv.appendChild(d);
         curSteps = { node: d, rows: d.querySelector('.rows'), cs: d.querySelector('.cs'), count: 0, secs: 0, cost: 0, agents: {} };
       }
@@ -729,44 +903,35 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       curSteps.cs.textContent = stepsLabel(curSteps);
       return;
     }
-
     curSteps = null;
     var html = '';
     switch (e.type) {
       case 'message': html = agentMessage(env); break;
       case 'directive': case 'note': case 'goal.updated': html = humanBlock(env); break;
       case 'approval.requested':
-        html = sysLine('gate', '<b>' + esc(gateLabel(e.gate)) + '</b> — ' + esc(tSys(e.summary)));
-        break;
+        html = sysLine('gate', '<b>' + esc(gateLabel(e.gate)) + '</b> — ' + esc(tSys(e.summary))); break;
       case 'approval.resolved':
         html = sysLine(e.decision === 'allow' ? 'ok' : 'no',
-          '<b>' + t(e.decision === 'allow' ? 'approved' : 'rejected') + '</b>' + (e.note ? ' — ' + esc(e.note) : '') + ' · ' + t('human'));
-        break;
+          '<b>' + t(e.decision === 'allow' ? 'approved' : 'rejected') + '</b>' + (e.note ? ' — ' + esc(e.note) : '') + ' · ' + t('human')); break;
       case 'task.created':
-        html = sysLine('task', t('new task') + ' — <b>' + esc(e.title) + '</b> → ' + esc(e.assignee));
-        break;
+        html = sysLine('task', t('new task') + ' — <b>' + esc(e.title) + '</b> → ' + esc(e.assignee)); break;
       case 'task.updated':
         if (!e.status || (e.status === 'in-progress' && !e.note)) { html = ''; break; }
         html = sysLine(e.status === 'accepted' ? 'taskdone' : 'task',
-          t('task update') + ' → <b>' + esc(t(STAGE[e.status] || e.status)) + '</b>' + (e.note ? ' — ' + esc(tSys(e.note)) : ''));
-        break;
+          t('task update') + ' → <b>' + esc(t(STAGE[e.status] || e.status)) + '</b>' + (e.note ? ' — ' + esc(tSys(e.note)) : '')); break;
       case 'run.created':
-        html = sysLine('task', t('run created') + ' — ' + e.agents.map(function (a) { return '<b>' + esc(a.name) + '</b> (' + esc(t(a.role)) + ')'; }).join(' + '));
-        break;
+        html = sysLine('task', t('run created') + ' — ' + e.agents.map(function (a) { return '<b>' + esc(a.name) + '</b> (' + esc(t(a.role)) + ')'; }).join(' + ')); break;
       case 'run.status':
         html = sysLine(e.status === 'done' ? 'ok' : e.status === 'paused' ? 'no' : 'task',
-          t('run') + ' → <b>' + esc(t(e.status)) + '</b>' + (e.reason ? ' — ' + esc(tSys(e.reason)) : ''));
-        break;
+          t('run') + ' → <b>' + esc(t(e.status)) + '</b>' + (e.reason ? ' — ' + esc(tSys(e.reason)) : '')); break;
       case 'error':
-        html = sysLine('no', '<span style="color:var(--bad)">' + esc(e.scope) + ' — ' + esc(e.message) + '</span>');
-        break;
+        html = sysLine('no', '<span style="color:var(--bad)">' + esc(e.scope) + ' — ' + esc(e.message) + '</span>'); break;
     }
     if (!html) return;
     var div = document.createElement('div');
     div.innerHTML = html;
     conv.appendChild(div.firstChild);
   }
-
   function rebuildConv() {
     el('conv').innerHTML = '';
     curSteps = null;
@@ -775,6 +940,14 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   // ------------------------------------------------------------ interactions
   document.addEventListener('click', function (ev) {
+    var cp = ev.target.closest('[data-copy]');
+    if (cp) {
+      var txt = cp.getAttribute('data-copy');
+      if (navigator.clipboard) navigator.clipboard.writeText(txt);
+      var old = cp.textContent; cp.textContent = t('copied');
+      setTimeout(function () { cp.textContent = old; }, 1000);
+      return;
+    }
     var b = ev.target.closest('button'); if (!b) return;
     var act = b.getAttribute('data-act'), agent = b.getAttribute('data-agent');
     if (act && agent) {
@@ -796,7 +969,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     }
   });
 
-  var scope = 'all', mode = 'supplement', interrupt = false;
+  var scope = 'all';
   function renderScopes(s) {
     var names = ['all'].concat(s.agents.map(function (a) { return a.name; }));
     setHtml('scopeChips', names.map(function (n) {
@@ -817,14 +990,18 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     el('intChip').classList.toggle('on', interrupt);
     el('dirHint').textContent = t(interrupt ? 'Aborts the current turn and re-delivers immediately.' : 'Lands at the next turn boundary, with a delivery receipt.');
   });
-  el('sendBtn').addEventListener('click', function () {
+  function send() {
     var text = el('dirText').value.trim(); if (!text) return;
     post('/api/directive', { scope: scope, mode: mode, text: text, interrupt: interrupt })
-      .then(function () { el('dirText').value = ''; interrupt = false; el('intChip').classList.remove('on'); });
-  });
+      .then(function () { el('dirText').value = ''; el('dirText').style.height = 'auto'; interrupt = false; el('intChip').classList.remove('on'); applyStatic(); });
+  }
+  el('sendBtn').addEventListener('click', send);
   el('dirText').addEventListener('input', function () {
     this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 130) + 'px';
+    this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+  });
+  el('dirText').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' && !ev.shiftKey && !ev.metaKey && !ev.isComposing) { ev.preventDefault(); send(); }
   });
   el('pauseBtn').addEventListener('click', function () {
     post('/api/run-pause', { paused: !(state && state.status === 'paused') });
@@ -842,6 +1019,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     applyStatic();
     if (state) renderState(state);
     rebuildConv();
+    loadRuns();
   });
 
   // ------------------------------------------------------------ state + boot
@@ -861,13 +1039,19 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     renderScopes(s);
   }
 
+  applyTheme();
   applyStatic();
   loadRuns();
   setInterval(loadRuns, 30000);
   setInterval(function () { if (state) renderTop(state); }, 30000);
   fetch(api('/api/state')).then(function (r) { return r.json(); }).then(function (s) {
     renderState(s);
-    loadRuns();
+    if (new URLSearchParams(location.search).get('snapshot')) {
+      fetch(api('/api/events?since=0')).then(function (r) { return r.json(); }).then(function (evs) {
+        evs.forEach(function (env) { allEvents.push(env); appendEvent(env); });
+      });
+      return;
+    }
     var es = new EventSource(api('/api/stream?since=0'));
     es.onmessage = function (m) {
       var env = JSON.parse(m.data);
@@ -875,7 +1059,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       appendEvent(env);
       scheduleRefetch();
     };
-    es.onerror = function () { el('hstatus').textContent = '…'; };
+    es.onerror = function () {};
   });
 })();
 </script>

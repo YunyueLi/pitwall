@@ -116,6 +116,9 @@ async function handle(primary: ConsoleBackend, req: IncomingMessage, res: Server
         const b = ledgerBackend(r.runId);
         const s = b.state();
         const live = readControl(runDir(r.runId));
+        const tasks = [...s.tasks.values()].filter((x) => x.status !== 'superseded' && x.status !== 'rejected');
+        let cost = 0;
+        for (const a of s.agents.values()) cost += a.totals.costUsd;
         return {
           runId: r.runId,
           createdAt: r.createdAt,
@@ -125,6 +128,10 @@ async function handle(primary: ConsoleBackend, req: IncomingMessage, res: Server
           mode: b.mode(),
           live: !!live,
           current: r.runId === primary.runId,
+          pending: [...s.approvals.values()].filter((a) => !a.decision).length,
+          costUsd: cost,
+          tasksDone: tasks.filter((x) => x.status === 'accepted').length,
+          tasksTotal: tasks.length,
         };
       }));
       return;
