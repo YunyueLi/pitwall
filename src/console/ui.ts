@@ -403,32 +403,32 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     'Pause': '暂停', 'Resume': '继续', 'Send': '发送', 'New run': '新建运行',
     'running': '运行中', 'paused': '已暂停', 'done': '已完成', 'failed': '失败', 'awaiting-review': '待验收',
     'team': '团队', 'pair': '结对',
-    'idle': '空闲', 'working': '工作中', 'dead': '掉线', 'awaiting-approval': '等待批准',
+    'idle': '空闲', 'working': '工作中', 'dead': '无响应', 'awaiting-approval': '等待批准',
     'director': '总监', 'engineer': '工程师', 'driver': '实现', 'reviewer': '评审',
     'plan': '计划', 'acceptance': '验收', 'task': '任务仲裁', 'tool': '操作',
     'Complete': '已完成', 'Live': '进行中', 'Paused': '已暂停', 'Needs you': '等你决定', 'Failed': '失败',
-    'Plan': '任务', 'Agents': '代理', 'Criteria': '验收标准', 'Changes': '文件变更', 'The room': '协作现场',
+    'Plan': '任务', 'Agents': '代理', 'Criteria': '验收标准', 'Changes': '文件变更', 'Conversation': '对话记录',
     'show steps': '显示执行细节', 'hide steps': '隐藏执行细节',
     'tasks': '任务', 'turns': '轮', 'elapsed': '耗时', 'cost': '花费', 'tokens': 'Token',
-    'planned': '待开工', 'building': '实现中', 'in review': '审核中', 'accepted': '已验收',
+    'planned': '待开始', 'building': '实现中', 'in review': '审核中', 'accepted': '已验收',
     'The director is studying the repository and drafting the plan…': '总监正在研究仓库、起草任务计划……',
     'No tasks yet.': '尚无任务。', 'No agents yet.': '尚无代理。', 'No changes yet.': '尚无文件变更。', 'None set.': '未设定。',
     'You': '你', 'human': '人类',
     'objection': '驳回', 'verdict': '裁决', 'report': '汇报', 'handoff': '计划', 'question': '提问', 'info': '消息',
     'directive': '指令', 'note': '批注', 'goal update': '目标更新',
-    'supplement': '补充', 'override': '覆盖', 'interrupt': '打断',
+    'supplement': '补充', 'override': '覆盖', 'interrupt': '中断',
     'to all': '发给全体', 'to ': '发给 ',
     'approved': '已批准', 'rejected': '已驳回',
-    'run created': '运行创建', 'new task': '新任务', 'task update': '任务',
-    'reports done': '自报完成', 'changes required': '需要修改', 'blocked': '受阻', 'approve': '通过',
+    'run created': '已创建运行', 'new task': '新任务', 'task update': '任务',
+    'reports done': '报告完成', 'changes required': '需要修改', 'blocked': '受阻', 'approve': '通过',
     'steps': '步', 'show full message': '展开完整消息', 'details': '详情',
     'Approve': '通过', 'Reject': '驳回',
-    'Add guidance, change direction, or overrule…': '补充指导、调整方向，或推翻先前口径……',
-    'Lands at the next turn boundary, with a delivery receipt.': '将在下一轮次边界送达，留有送达回执。',
-    'Aborts the current turn and re-delivers immediately.': '立即打断当前轮次并即时送达。',
+    'Add guidance, change direction, or overrule…': '补充说明、调整方向，或推翻此前的指令……',
+    'Lands at the next turn boundary, with a delivery receipt.': '将在下一轮次边界送达，并留有送达回执。',
+    'Aborts the current turn and re-delivers immediately.': '立即中断当前轮次并即时送达。',
     'delivery receipt': '送达回执', 'received directive': '已收到指令',
-    'starts a turn': '开始新一轮', 'finished': '完成本轮', 'registered': '注册',
-    'Raw': '原始输出', 'Interrupt': '打断',
+    'starts a turn': '开始新一轮', 'finished': '完成本轮', 'registered': '已注册',
+    'Raw': '原始输出', 'Interrupt': '中断',
     'run': '运行', 'Runs': '运行', 'Local · you': '本地 · 你', 'live': '在线',
     'Needs you': '等你决定', 'In progress': '进行中', 'Finished': '已结束',
     'This run is read-only — it is not driven by this process.': '该运行为只读——不由本进程驱动，如需操作请用 pitwall resume。',
@@ -438,19 +438,19 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     'just now': '刚刚', 'm ago': ' 分钟前', 'h ago': ' 小时前', 'd ago': ' 天前'
   };
   var SYS = [
-    [/^The director proposes (\d+) task\(s\)\. Approve the plan to let the engineer start\.$/, '总监提出 $1 个任务的计划，批准后工程师开工。'],
-    [/^All (\d+) task\(s\) implemented and approved by the director\. Final human acceptance required\.$/, '全部 $1 个任务已实现并通过总监审核，等待你的最终验收。'],
+    [/^The director proposes (\d+) task(?:s|\(s\))?\. Approve the plan to let the engineer start\.$/, '总监提出 $1 个任务的计划，批准后工程师开始实现。'],
+    [/^All (\d+) task(?:s|\(s\))? implemented and approved by the director\. Final human acceptance required\.$/, '全部 $1 个任务已实现并通过总监审核，等待你的最终验收。'],
     [/^"(.+)": director still objects after (\d+) rounds\. Your call\.$/, '「$1」：总监 $2 轮后仍不通过，由你裁决。'],
     [/^Reviewer approves after round (\d+)\. Human acceptance required\.$/, '评审在第 $1 轮通过，等待你的验收。'],
     [/^Max review rounds \((\d+)\) reached without reviewer approval\. Human decision required\.$/, '已达最大评审轮数（$1）仍未通过，由你决定。'],
     [/^director approved in review round (\d+)$/, '总监在第 $1 轮审核通过'],
     [/^director objection in round (\d+)$/, '总监在第 $1 轮驳回'],
-    [/^engineer reports done; director review pending$/, '工程师自报完成，等待总监审核'],
-    [/^driver reports done; awaiting independent review$/, '实现方自报完成，等待独立评审'],
+    [/^engineer reports done; director review pending$/, '工程师报告完成，等待总监审核'],
+    [/^driver reports done; awaiting independent review$/, '实现方报告完成，等待独立评审'],
     [/^reviewer objection in round (\d+)$/, '评审在第 $1 轮驳回'],
-    [/^plan rejected by human$/, '计划被人类驳回'],
-    [/^human rejected acceptance(.*)$/, '人类驳回验收$1'],
-    [/^human sided with the objection(.*)$/, '人类支持驳回意见$1'],
+    [/^plan rejected by human$/, '计划已被你驳回'],
+    [/^human rejected acceptance(.*)$/, '你驳回了验收$1'],
+    [/^human sided with the objection(.*)$/, '你支持了驳回意见$1'],
     [/^accepted by human$/, '人类已验收'], [/^task accepted by human$/, '人类已验收'],
     [/^resumed from ledger$/, '已从账本恢复'],
     [/^paused by human$/, '被人类暂停'], [/^resumed by human$/, '被人类恢复'],
@@ -462,8 +462,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     [/^agent turn failed.*$/, '代理轮次失败：检查错误后可补充指令并恢复'],
     [/^two consecutive turn timeouts.*$/, '连续两次轮次超时，需要人工介入'],
     [/^recovered$/, '已恢复'], [/^unpaused by human$/, '被人类恢复'],
-    [/^driver reports done.*$/, '实现方自报完成，等待独立评审'],
-    [/^engineer reports done.*$/, '工程师自报完成，等待总监审核']
+    [/^driver reports done.*$/, '实现方报告完成，等待独立评审'],
+    [/^engineer reports done.*$/, '工程师报告完成，等待总监审核']
   ];
   var urlLang = new URLSearchParams(location.search).get('lang');
   var lang = (urlLang === 'zh' || urlLang === 'en') ? urlLang
@@ -576,7 +576,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     document.documentElement.lang = lang;
     el('langBtn').textContent = lang === 'zh' ? 'EN' : '中文';
     el('newRunLabel').textContent = t('New run');
-    el('secRoom').textContent = t('The room');
+    el('secRoom').textContent = t('Conversation');
     el('secTasks').textContent = t('Plan');
     el('secAgents').textContent = t('Agents');
     el('secCrit').textContent = t('Criteria');

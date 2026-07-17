@@ -378,7 +378,7 @@ export class Orchestrator {
         type: 'approval.requested',
         approvalId: newId('appr'),
         gate: 'plan',
-        summary: `The director proposes ${pending.length} task(s). Approve the plan to let the engineer start.`,
+        summary: `The director proposes ${pending.length} ${pending.length === 1 ? 'task' : 'tasks'}. Approve the plan to let the engineer start.`,
         detail: pending.map((t, i) => `${i + 1}. ${t.title}`).join('\n'),
       });
       return 'applied';
@@ -392,7 +392,7 @@ export class Orchestrator {
         type: 'approval.requested',
         approvalId: newId('appr'),
         gate: 'acceptance',
-        summary: `All ${active.length} task(s) implemented and approved by the director. Final human acceptance required.`,
+        summary: `All ${active.length} ${active.length === 1 ? 'task' : 'tasks'} implemented and approved by the director. Final human acceptance required.`,
         detail: active.map((t) => `✓ ${t.title}`).join('\n'),
       });
       return 'applied';
