@@ -63,6 +63,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) ~ * , body::before { } }
   :root[data-theme="dark"] body::before, body:has(:root[data-theme="dark"]) { }
   ::selection { background: var(--live-fill); }
+  :focus-visible { outline: 2px solid var(--live); outline-offset: 2px; border-radius: 4px; }
+  input:focus-visible, textarea:focus-visible { outline: none; }
   a { color: inherit; text-decoration: none; }
   button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
   input, textarea { font: inherit; }
@@ -87,15 +89,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     grid-template-areas: "side head head" "side main rail"; transition: grid-template-columns .34s var(--spring); }
   body.side-off .app { --cl: 64px; }
   body.rail-off .app { --cr: 0px; }
-  @media (max-width: 1180px) { .app { grid-template-columns: var(--cl) 1fr; grid-template-areas: "side head" "side main"; } .rail { display: none; } .railtoggle { display: none; } }
-  @media (max-width: 900px) {
-    .app { grid-template-columns: 1fr; grid-template-areas: "head" "main"; }
-    .side { position: fixed; top: 0; bottom: 0; left: 0; width: 264px; transform: translateX(-101%); z-index: 45; transition: transform .3s var(--spring), box-shadow .3s var(--spring); }
-    .side.open { transform: none; box-shadow: var(--shadow-l); }
-    .scrim { display: none; position: fixed; inset: 0; z-index: 44; background: rgba(15,13,10,.28); opacity: 0; transition: opacity .3s var(--ease); }
-    body.side-open .scrim { display: block; opacity: 1; }
-    .menubtn { display: inline-flex !important; }
-  }
 
   /* header */
   header { grid-area: head; display: flex; align-items: center; gap: 10px; padding: 0 14px;
@@ -347,8 +340,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   /* composer */
   .composer { position: absolute; left: 260px; right: 340px; bottom: 0; z-index: 12; padding: 16px 30px 20px; background: linear-gradient(180deg, transparent, var(--paper) 44%); pointer-events: none; transition: left .34s var(--spring), right .34s var(--spring); }
-  @media (max-width: 1180px) { .composer { right: 0; } }
-  @media (max-width: 900px) { .composer { left: 0 !important; } }
   body.side-off .composer { left: 64px; }
   body.rail-off .composer { right: 0; }
   .cwrap { max-width: 704px; margin: 0 auto; pointer-events: auto; }
@@ -373,8 +364,66 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .sendbtn svg { width: 15px; height: 15px; }
   .note { margin: 9px auto 0; max-width: 704px; font-size: 11px; color: var(--ink3); padding: 0 4px; }
 
+  /* thinking bubble (live turn feedback in the conversation) */
+  .msg.thinking .body { color: var(--ink2); }
+  .thinkln { font-size: 14px; }
+  .tdots { display: inline-flex; gap: 3px; margin-left: 9px; vertical-align: middle; }
+  .tdots i { width: 4px; height: 4px; border-radius: 50%; background: var(--ink3); animation: tdot 1.25s var(--ease) infinite; }
+  .tdots i:nth-child(2) { animation-delay: .16s; } .tdots i:nth-child(3) { animation-delay: .32s; }
+  @keyframes tdot { 0%, 62%, 100% { opacity: .22; transform: translateY(0); } 31% { opacity: 1; transform: translateY(-3px); } }
+  .thinkdet { display: block; margin-top: 6px; font: 11.5px/1.6 var(--mono); color: var(--ink3); overflow-wrap: anywhere; }
+
+  /* connection banner */
+  .offbar { position: fixed; top: 12px; left: 50%; z-index: 60; display: flex; align-items: center; gap: 9px;
+    background: var(--surface); color: var(--ink2); border: 1px solid var(--line2); font-size: 12.5px;
+    padding: 8px 15px 8px 12px; border-radius: 999px; box-shadow: var(--shadow-l);
+    opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-22px);
+    transition: opacity .3s var(--ease), transform .45s var(--spring); }
+  .offbar.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* jump to latest */
+  .jumpbtn { position: absolute; left: 50%; top: -8px; z-index: 13; display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface); color: var(--ink2); border: 1px solid var(--line2); font-size: 12px; font-weight: 500;
+    padding: 7px 14px 7px 12px; border-radius: 999px; box-shadow: var(--shadow-m);
+    opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(8px) scale(.96);
+    transition: opacity .24s var(--ease), transform .38s var(--spring), color .16s; }
+  .jumpbtn svg { width: 13px; height: 13px; }
+  .jumpbtn:hover { color: var(--ink); border-color: var(--ink3); }
+  body.can-jump .jumpbtn { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
+
+  /* welcome / empty home */
+  .welcome { padding: 96px 0 40px; animation: fade .5s var(--spring) both; }
+  .welcome .wmk { display: inline-block; width: 46px; height: 46px; margin-bottom: 20px; }
+  .welcome .wmk svg { width: 100%; height: 100%; display: block; }
+  .welcome h2 { font-size: 21px; font-weight: 660; letter-spacing: -.016em; margin: 0 0 8px; }
+  .welcome p { color: var(--ink2); font-size: 14px; line-height: 1.7; margin: 0 0 20px; max-width: 46ch; }
+  .welcome pre { display: inline-block; background: var(--codebg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 16px; font: 12.5px/1.6 var(--mono); color: var(--ink2); margin: 0; cursor: pointer; transition: border-color .16s var(--ease), color .16s; }
+  .welcome pre:hover { border-color: var(--line2); color: var(--ink); }
+  body.no-run .rail, body.no-run .composer, body.no-run .convhead, body.no-run .railtoggle, body.no-run .edgeR { display: none; }
+  body.no-run .app { --cr: 0px; }
+
   .toast { position: fixed; bottom: 108px; left: 50%; transform: translateX(-50%) translateY(14px); z-index: 50; background: var(--ink); color: var(--paper); font-size: 12.5px; padding: 9px 16px; border-radius: 999px; box-shadow: var(--shadow-l); opacity: 0; pointer-events: none; transition: opacity .3s var(--ease), transform .4s var(--spring); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* responsive — kept last so these rules win the cascade over the base rules above */
+  @media (max-width: 1180px) {
+    .app { grid-template-columns: var(--cl) 1fr; grid-template-areas: "side head" "side main"; }
+    .rail, .railtoggle, .edgeR { display: none; }
+    .composer { right: 0; }
+  }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-areas: "head" "main"; }
+    .side { position: fixed; top: 0; bottom: 0; left: 0; width: 264px; transform: translateX(-101%); z-index: 45; transition: transform .3s var(--spring), box-shadow .3s var(--spring); }
+    .side.open { transform: none; box-shadow: var(--shadow-l); }
+    .scrim { display: none; position: fixed; inset: 0; z-index: 44; background: rgba(15,13,10,.28); opacity: 0; transition: opacity .3s var(--ease); }
+    body.side-open .scrim { display: block; opacity: 1; }
+    .menubtn { display: inline-flex; }
+    .composer { left: 0; }
+    .doc { padding: 26px 20px 180px; }
+    h1.goal { font-size: 19px; }
+    .body { margin-left: 0; }
+    .sys, .steps { margin-left: 0; }
+  }
 </style>
 </head>
 <body>
@@ -439,6 +488,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       <div id="decisions"></div>
       <div class="convhead"><span class="h" id="secRoom"></span><span class="sp"></span><button class="hbtn" id="noiseChip" style="font-size:11px;padding:3px 8px"></button></div>
       <div class="conv" id="conv"></div>
+      <div id="thinking"></div>
     </div>
   </main>
 
@@ -457,6 +507,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   </aside>
 
   <div class="composer" id="composer">
+    <button class="jumpbtn" id="jumpBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg><span id="jumpTxt"></span></button>
     <div class="cwrap">
       <div class="cbox"><div class="in">
         <textarea id="dirText" rows="1"></textarea>
@@ -471,6 +522,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   </div>
 </div>
 <div class="scrim" id="scrim"></div>
+<div class="offbar" id="offbar"><span class="spin"></span><span id="offtxt"></span></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -510,8 +562,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     'starts a turn': '开始新一轮', 'finished': '完成本轮', 'registered': '已注册',
     'Raw': '原始输出', 'Interrupt': '中断', 'run': '运行',
     'Needs you': '等你决定', 'In progress': '进行中', 'Finished': '已结束',
-    'This run is read-only — it is not driven by this process.': '该运行为只读——不由本进程驱动，如需操作请用 pitwall resume。',
+    'This run is read-only. Take control from the terminal with pitwall resume.': '该运行为只读，如需操作，请在终端运行 pitwall resume。',
     'Nothing running yet.': '暂无运行。', 'copied': '已复制',
+    'Reconnecting…': '连接中断，正在重连…', 'Jump to latest': '回到最新', 'Thinking': '思考中', 'Working': '工作中',
     'just now': '刚刚', 'm ago': ' 分钟前', 'h ago': ' 小时前', 'd ago': ' 天前'
   };
   var SYS = [
@@ -556,12 +609,24 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       .then(function (r) { return r.json(); }).then(function (d) { if (d && d.error) alert(d.error); return d; });
   }
   function tstr(ts) { return new Date(ts).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' }); }
+  function dsep() { return lang === 'zh' ? '：' : ': '; }
+  function relPath(p) {
+    p = String(p == null ? '' : p);
+    if (!state || !state.repo) return p;
+    var repo = state.repo;
+    var roots = [repo, '/private' + repo, repo.replace(/^\/private/, '')];
+    for (var i = 0; i < roots.length; i++) { var r = roots[i]; if (r && p.indexOf(r + '/') === 0) return p.slice(r.length + 1); }
+    return p;
+  }
   function money(v) { return '$' + (v || 0).toFixed(2); }
   function ftok(n) { return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
   function ago(iso) { var m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); if (m < 1) return t('just now'); if (m < 60) return m + t('m ago'); if (m < 1440) return Math.round(m / 60) + t('h ago'); return Math.round(m / 1440) + t('d ago'); }
   function toast(m) { var e = $('toast'); e.textContent = m; e.classList.add('show'); setTimeout(function () { e.classList.remove('show'); }, 1800); }
   var cache = {};
   function setHtml(id, html) { if (cache[id] === html) return; cache[id] = html; $(id).innerHTML = html; }
+  var isSnap = !!new URLSearchParams(location.search).get('snapshot');
+  function nearBottom() { var m = $('main'); return m.scrollHeight - m.scrollTop - m.clientHeight < 160; }
+  function forceBottom() { if (isSnap) return; var m = $('main'); m.scrollTop = m.scrollHeight; }
 
   // ---- theme (lives in the account menu, not the chrome)
   function applyTheme() {
@@ -608,6 +673,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     $('tmDark').textContent = lang === 'zh' ? '深色' : 'Dark';
     $('tmAuto').textContent = lang === 'zh' ? '跟随系统' : 'System';
     $('amAbout').textContent = 'Pitwall · Apache-2.0';
+    $('offtxt').textContent = t('Reconnecting…');
+    $('jumpTxt').textContent = t('Jump to latest');
     [].forEach.call($('langSeg').children, function (b) { b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
     renderModeChip();
   }
@@ -624,6 +691,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   $('brandHome').onclick = function () { spinMark(); if (document.body.classList.contains('side-off')) { document.body.classList.remove('side-off'); localStorage.setItem('pitwall-side', '0'); $('side').classList.remove('peek'); } };
   $('side').addEventListener('mouseenter', function () { if (document.body.classList.contains('side-off')) $('side').classList.add('peek'); });
   $('side').addEventListener('mouseleave', function () { if (document.body.classList.contains('side-off')) $('side').classList.remove('peek'); });
+  function fitViewport() { if (window.innerWidth <= 900) { document.body.classList.remove('side-off'); $('side').classList.remove('peek'); } else { closeDrawer(); } }
+  addEventListener('resize', fitViewport);
   $('railBtn').onclick = function () { var off = document.body.classList.toggle('rail-off'); localStorage.setItem('pitwall-rail', off ? '1' : '0'); if (!off) $('rail').classList.remove('peek'); setTimeout(drawSpark, 360); };
   $('edgeR').onmouseenter = function () { $('rail').classList.add('peek'); setTimeout(drawSpark, 40); };
   $('rail').addEventListener('mouseleave', function () { if (document.body.classList.contains('rail-off')) $('rail').classList.remove('peek'); });
@@ -716,15 +785,15 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     $('pauseBtn').innerHTML = s.status === 'paused' ? '▷' : '❙❙';
     $('pauseBtn').title = t(s.status === 'paused' ? 'Resume' : 'Pause');
     $('pauseBtn').style.display = s.readonly ? 'none' : '';
-    document.title = 'Pitwall — ' + t(s.status);
+    document.title = 'Pitwall · ' + t(s.status);
     $('goal').textContent = s.goal;
 
     var word = pend.length ? t('Needs you') : isWorking ? working.map(function (a) { return a.name; }).join(', ')
       : s.status === 'done' ? t('Complete') : s.status === 'failed' ? t('Failed') : s.status === 'paused' ? t('Paused') : t('Live');
     $('teleState').className = 'w' + (isWorking ? ' shimmer' : '');
     $('teleState').textContent = isWorking ? (lang === 'zh' ? word + ' 工作中…' : word + ' working…') : word;
-    var sub = [t(s.mode)]; if (s.autonomous) sub.push(lang === 'zh' ? '自主模式' : 'autonomous'); if (s.statusReason) sub.push(tSys(s.statusReason));
-    $('teleSub').textContent = sub.join(' · ');
+    var sub = [t(s.mode)]; if (s.autonomous) sub.push(lang === 'zh' ? '自主模式' : 'autonomous');
+    setHtml('teleSub', esc(sub.join(' · ')) + (s.statusReason ? '<div>' + esc(tSys(s.statusReason)) + '</div>' : ''));
 
     var cost = 0, tok = 0, turns = 0;
     s.agents.forEach(function (a) { cost += a.totals.costUsd; tok += a.totals.inputTokens + a.totals.outputTokens; turns += a.totals.turns; });
@@ -752,7 +821,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     $('critSec').style.display = (s.criteria || []).length ? '' : 'none';
     setHtml('criteria', (s.criteria || []).map(function (c) { return '<li>' + esc(c) + '</li>'; }).join(''));
 
-    var files = s.files || [];
+    var files = [], seenF = {};
+    (s.files || []).forEach(function (f) { var p = relPath(f.path); if (seenF[p] != null) { if (f.kind) files[seenF[p]].kind = f.kind; } else { seenF[p] = files.length; files.push({ path: p, kind: f.kind }); } });
     $('filesSec').style.display = files.length ? '' : 'none';
     if (files.length) { $('fileCount').textContent = files.length; setHtml('files', files.slice(-40).map(function (f) { var k = f.kind || 'modified', L = k === 'added' ? 'A' : k === 'deleted' ? 'D' : 'M'; return '<div class="frow"><span class="fkind ' + k + '">' + L + '</span><span class="fp">' + esc(f.path) + '</span></div>'; }).join('')); }
 
@@ -760,12 +830,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       return '<div class="decision"><div class="core"><div class="k"><span class="di"></span>' + esc(gateLabel(a.gate)) + '</div>'
         + '<div class="s">' + esc(tSys(a.summary)) + '</div>'
         + (a.detail ? '<details class="d-more"><summary>' + t('details') + '</summary><pre>' + esc(a.detail) + '</pre></details>' : '')
-        + '<input type="text" id="note-' + esc(a.approvalId) + '" placeholder="' + (lang === 'zh' ? '备注——驳回请说明原因' : 'Note — say why if you reject') + '">'
+        + '<input type="text" id="note-' + esc(a.approvalId) + '" placeholder="' + (lang === 'zh' ? '备注，驳回时请说明原因' : 'Optional note. Say why if you reject.') + '">'
         + '<div class="acts"><button class="pbtn" data-appr="allow" data-id="' + esc(a.approvalId) + '">' + t('Approve') + '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>'
         + '<button class="gbtn" data-appr="deny" data-id="' + esc(a.approvalId) + '">' + t('Reject') + '</button></div></div></div>';
     }).join(''));
 
-    if (s.readonly) { $('dirText').disabled = true; $('sendBtn').disabled = true; $('dirHint').textContent = t('This run is read-only — it is not driven by this process.'); }
+    if (s.readonly) { $('dirText').disabled = true; $('sendBtn').disabled = true; $('dirHint').textContent = t('This run is read-only. Take control from the terminal with pitwall resume.'); }
   }
 
   // ---- tasks
@@ -787,6 +857,25 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     }).join(''));
   }
   $('tlist').addEventListener('click', function (ev) { var n = ev.target.closest('.trow'); if (!n) return; var id = n.getAttribute('data-task'); openTasks[id] = !openTasks[id]; n.classList.toggle('open'); });
+
+  // ---- live thinking bubble (mirrors working agents into the conversation)
+  function renderThinking(s) {
+    var box = $('thinking'); if (!box) return;
+    var working = s.status === 'running' ? s.agents.filter(function (a) { return a.state === 'working'; }) : [];
+    var html = working.map(function (a) {
+      var role = a.role ? '<span class="r">' + esc(t(a.role)) + '</span>' : '';
+      var det = a.detail ? '<span class="thinkdet">' + esc(tSys(a.detail)) + '</span>' : '';
+      var word = lang === 'zh' ? t('Thinking') : (a.name + ' · ' + t('Working'));
+      return '<div class="msg thinking"><div class="head">' + avatar(a.name, false)
+        + '<span class="n">' + esc(a.name) + '</span>' + role + '</div>'
+        + '<div class="body"><span class="thinkln shimmer">' + esc(word) + '</span>'
+        + '<span class="tdots"><i></i><i></i><i></i></span>' + det + '</div></div>';
+    }).join('');
+    if (box.innerHTML === html) return;
+    var stick = nearBottom();
+    box.innerHTML = html;
+    if (stick && html) forceBottom();
+  }
 
   // ---- conversation
   var curSteps = null;
@@ -814,7 +903,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var chip = '';
     if (parsed.json) {
       if (parsed.json.verdict) chip = parsed.json.verdict === 'approve' ? '<div class="verdict ok">✓ ' + t('approve') + '</div>' : '<div class="verdict no">✕ ' + t('changes required') + '</div>';
-      else if (parsed.json.status) chip = parsed.json.status === 'done' ? '<div class="verdict ok">✓ ' + t('reports done') + '</div>' : '<div class="verdict no">— ' + t(parsed.json.status) + '</div>';
+      else if (parsed.json.status) chip = parsed.json.status === 'done' ? '<div class="verdict ok">✓ ' + t('reports done') + '</div>' : '<div class="verdict no">' + t(parsed.json.status) + '</div>';
     }
     var role = human ? '' : roleOf(name);
     return '<div class="msg"><div class="head">' + avatar(name, human) + '<span class="n">' + esc(name) + '</span>' + (role ? '<span class="r">' + esc(t(role)) + '</span>' : '') + tag + '<span class="t">' + tstr(env.ts) + '</span></div><div class="body' + rule + '">' + clipBody(e.text) + chip + '</div></div>';
@@ -830,11 +919,11 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var e = env.event;
     switch (e.type) {
       case 'turn.started': return '<b>' + esc(e.agent) + '</b> ' + t('starts a turn');
-      case 'turn.completed': { var u = e.usage || {}, b = ['<b>' + esc(e.agent) + '</b> ' + t('finished')]; if (e.durationMs != null) b.push(Math.round(e.durationMs / 1000) + 's'); if (u.outputTokens != null) b.push(u.outputTokens + ' tok'); if (u.costUsd != null) b.push('$' + u.costUsd.toFixed(3)); return b.join(' · ') + (e.error ? ' — <span style="color:var(--bad)">' + esc(tSys(e.error)) + '</span>' : ''); }
+      case 'turn.completed': { var u = e.usage || {}, b = ['<b>' + esc(e.agent) + '</b> ' + t('finished')]; if (e.durationMs != null) b.push(Math.round(e.durationMs / 1000) + 's'); if (u.outputTokens != null) b.push(u.outputTokens + ' tok'); if (u.costUsd != null) b.push('$' + u.costUsd.toFixed(3)); return b.join(' · ') + (e.error ? dsep() + '<span style="color:var(--bad)">' + esc(tSys(e.error)) + '</span>' : ''); }
       case 'tool.used': return '<b>' + esc(e.agent) + '</b> ▸ ' + esc(e.tool) + ' · ' + esc(e.summary);
-      case 'files.changed': return (e.agent ? '<b>' + esc(e.agent) + '</b> · ' : '') + e.changes.map(function (c) { return '<span class="fb">' + esc(c.kind[0]) + ' ' + esc(c.path) + '</span>'; }).join(' ');
+      case 'files.changed': return (e.agent ? '<b>' + esc(e.agent) + '</b> · ' : '') + e.changes.map(function (c) { return '<span class="fb">' + esc(c.kind[0]) + ' ' + esc(relPath(c.path)) + '</span>'; }).join(' ');
       case 'agent.status': return esc(e.agent) + ' → ' + esc(t(e.state)) + (e.detail ? ' (' + esc(tSys(e.detail)) + ')' : '');
-      case 'directive.delivered': return t('delivery receipt') + ' — <b>' + esc(e.agent) + '</b> ' + t('received directive');
+      case 'directive.delivered': return t('delivery receipt') + dsep() + '<b>' + esc(e.agent) + '</b> ' + t('received directive');
       case 'agent.registered': return t('registered') + ' <b>' + esc(e.spec.name) + '</b> · ' + esc(e.spec.adapter) + ' · ' + esc(t(e.spec.role));
       case 'agent.native-session': return esc(e.agent) + ' · session ' + esc(String(e.nativeSessionId).slice(0, 13)) + '…';
       default: return esc(JSON.stringify(e).slice(0, 140));
@@ -843,27 +932,28 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   function stepsLabel(c) { var b = [c.count + ' ' + t('steps')]; if (c.secs) b.push(c.secs + 's'); if (c.cost) b.push('$' + c.cost.toFixed(2)); var ags = Object.keys(c.agents); return (ags.length ? ags.join(' + ') + ' · ' : '') + b.join(' · '); }
   function appendEvent(env) {
     var e = env.event, conv = $('conv');
+    var stick = nearBottom();
     if (!isPrimary(e)) {
       if (!curSteps) { var d = document.createElement('details'); d.className = 'steps'; if (showNoise) d.open = true; d.innerHTML = '<summary><span class="cv">›</span><span class="cs"></span></summary><div class="rows"></div>'; conv.appendChild(d); curSteps = { rows: d.querySelector('.rows'), cs: d.querySelector('.cs'), count: 0, secs: 0, cost: 0, agents: {} }; }
       var row = document.createElement('div'); row.className = 'row'; row.innerHTML = stepRow(env); curSteps.rows.appendChild(row); curSteps.count += 1;
       if (e.agent) curSteps.agents[e.agent] = 1;
       if (e.type === 'turn.completed') { if (e.durationMs) curSteps.secs += Math.round(e.durationMs / 1000); if (e.usage && e.usage.costUsd) curSteps.cost += e.usage.costUsd; }
-      curSteps.cs.textContent = stepsLabel(curSteps); return;
+      curSteps.cs.textContent = stepsLabel(curSteps); if (stick) forceBottom(); return;
     }
     curSteps = null; var html = '';
     switch (e.type) {
       case 'message': html = agentMessage(env); break;
       case 'directive': case 'note': case 'goal.updated': html = humanBlock(env); break;
-      case 'approval.requested': html = sysLine('gate', '◆', '<b>' + esc(gateLabel(e.gate)) + '</b> — ' + esc(tSys(e.summary))); break;
-      case 'approval.resolved': html = sysLine(e.decision === 'allow' ? 'ok' : 'no', e.decision === 'allow' ? '✓' : '✕', '<b>' + t(e.decision === 'allow' ? 'approved' : 'rejected') + '</b>' + (e.note ? ' — ' + esc(tSys(e.note)) : '')); break;
-      case 'task.created': html = sysLine('tk', '○', t('new task') + ' — <b>' + esc(e.title) + '</b> → ' + esc(e.assignee)); break;
-      case 'task.updated': if (!e.status || (e.status === 'in-progress' && !e.note)) { html = ''; break; } html = sysLine(e.status === 'accepted' ? 'taskdone' : 'tk', e.status === 'accepted' ? '●' : '○', t('task update') + ' → <b>' + esc(t(STAGE[e.status] || e.status)) + '</b>' + (e.note ? ' — ' + esc(tSys(e.note)) : '')); break;
-      case 'run.created': html = sysLine('tk', '○', t('run created') + ' — ' + e.agents.map(function (a) { return '<b>' + esc(a.name) + '</b> (' + esc(t(a.role)) + ')'; }).join(' + ')); break;
-      case 'run.status': html = sysLine(e.status === 'done' ? 'ok' : e.status === 'paused' ? 'no' : 'tk', e.status === 'done' ? '■' : '·', t('run') + ' → <b>' + esc(t(e.status)) + '</b>' + (e.reason ? ' — ' + esc(tSys(e.reason)) : '')); break;
-      case 'error': html = sysLine('no', '✕', '<span style="color:var(--bad)">' + esc(e.scope) + ' — ' + esc(e.message) + '</span>'); break;
+      case 'approval.requested': html = sysLine('gate', '◆', '<b>' + esc(gateLabel(e.gate)) + '</b>' + dsep() + esc(tSys(e.summary))); break;
+      case 'approval.resolved': html = sysLine(e.decision === 'allow' ? 'ok' : 'no', e.decision === 'allow' ? '✓' : '✕', '<b>' + t(e.decision === 'allow' ? 'approved' : 'rejected') + '</b>' + (e.note ? '' + dsep() + esc(tSys(e.note)) : '')); break;
+      case 'task.created': html = sysLine('tk', '○', t('new task') + dsep() + '<b>' + esc(e.title) + '</b> → ' + esc(e.assignee)); break;
+      case 'task.updated': if (!e.status || (e.status === 'in-progress' && !e.note)) { html = ''; break; } html = sysLine(e.status === 'accepted' ? 'taskdone' : 'tk', e.status === 'accepted' ? '●' : '○', t('task update') + ' → <b>' + esc(t(STAGE[e.status] || e.status)) + '</b>' + (e.note ? '' + dsep() + esc(tSys(e.note)) : '')); break;
+      case 'run.created': html = sysLine('tk', '○', t('run created') + dsep() + e.agents.map(function (a) { return '<b>' + esc(a.name) + '</b> (' + esc(t(a.role)) + ')'; }).join(' + ')); break;
+      case 'run.status': html = sysLine(e.status === 'done' ? 'ok' : e.status === 'paused' ? 'no' : 'tk', e.status === 'done' ? '■' : '·', t('run') + ' → <b>' + esc(t(e.status)) + '</b>' + (e.reason ? dsep() + esc(tSys(e.reason)) : '')); break;
+      case 'error': html = sysLine('no', '✕', '<span style="color:var(--bad)">' + esc(e.scope) + dsep() + esc(e.message) + '</span>'); break;
     }
     if (!html) return; var div = document.createElement('div'); div.innerHTML = html; conv.appendChild(div.firstChild);
-    if (!new URLSearchParams(location.search).get('snapshot')) { var m = $('main'); m.scrollTop = m.scrollHeight; }
+    if (stick) forceBottom();
   }
   function rebuildConv() { $('conv').innerHTML = ''; curSteps = null; allEvents.forEach(appendEvent); }
 
@@ -905,25 +995,59 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   $('langSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; var l = b.getAttribute('data-lang'); if (l !== lang) switchLang(l); });
 
   // ---- state + boot
+  var mainEl = $('main');
+  mainEl.addEventListener('scroll', function () { document.body.classList.toggle('can-jump', !nearBottom()); });
+  $('jumpBtn').onclick = function () { mainEl.scrollTo({ top: mainEl.scrollHeight, behavior: reduce ? 'auto' : 'smooth' }); };
   var refetch = null;
   function scheduleRefetch() { if (refetch) return; refetch = setTimeout(function () { refetch = null; fetch(api('/api/state')).then(function (r) { return r.json(); }).then(renderState); }, 250); }
-  function renderState(s) { state = s; s.agents.forEach(function (a, i) { agentIdx[a.name] = i % 2; }); renderTop(s); renderTasks(s); renderScopes(s); }
+  function renderState(s) { state = s; s.agents.forEach(function (a, i) { agentIdx[a.name] = i % 2; }); renderTop(s); renderTasks(s); renderThinking(s); renderScopes(s); }
 
   applyTheme();
   var sp = new URLSearchParams(location.search);
   if (sp.get('side') === 'collapsed' || (sp.get('side') !== 'expanded' && localStorage.getItem('pitwall-side') === '1')) document.body.classList.add('side-off');
   if (sp.get('rail') === 'collapsed' || localStorage.getItem('pitwall-rail') === '1') document.body.classList.add('rail-off');
+  fitViewport();
   applyStatic(); loadRuns(); drawSpark();
   if (sp.get('menu')) document.body.classList.add('acct-open');
   setInterval(loadRuns, 30000);
   setInterval(function () { if (state) renderTop(state); }, 30000);
   fetch(api('/api/state')).then(function (r) { return r.json(); }).then(function (s) {
-    if (!s || !s.runId) { $('goal').textContent = ''; $('conv').innerHTML = '<div class="empty" style="padding:40px 0">' + (lang === 'zh' ? '从左侧选择一个运行，或用 pitwall run 启动一个。' : 'Pick a run from the sidebar, or start one with pitwall run.') + '</div>'; return; }
+    if (!s || !s.runId) { showWelcome(); return; }
     renderState(s);
-    if (sp.get('snapshot')) { fetch(api('/api/events?since=0')).then(function (r) { return r.json(); }).then(function (evs) { evs.forEach(function (env) { allEvents.push(env); appendEvent(env); }); }); return; }
-    var es = new EventSource(api('/api/stream?since=0'));
-    es.onmessage = function (m) { var env = JSON.parse(m.data); allEvents.push(env); appendEvent(env); scheduleRefetch(); };
-  }).catch(function () { $('conv').innerHTML = '<div class="empty" style="padding:40px 0">' + (lang === 'zh' ? '无法加载该运行。' : 'Could not load this run.') + '</div>'; });
+    if (isSnap) { fetch(api('/api/events?since=0')).then(function (r) { return r.json(); }).then(function (evs) { evs.forEach(function (env) { allEvents.push(env); appendEvent(env); }); }); return; }
+    connectStream();
+  }).catch(function () { showWelcome(lang === 'zh' ? '无法加载该运行，它可能已被移除。' : 'Could not load this run. It may have been removed.'); });
+
+  function showWelcome(msg) {
+    document.body.classList.add('no-run');
+    $('goal').textContent = '';
+    var mk = document.querySelector('#mk svg');
+    $('conv').innerHTML = '<div class="welcome"><span class="wmk">' + (mk ? mk.outerHTML : '') + '</span>'
+      + '<h2>' + (lang === 'zh' ? '指挥席已就绪' : 'The pit wall is ready') + '</h2>'
+      + '<p>' + esc(msg || (lang === 'zh' ? '从左侧选择一个运行，或在终端启动一个新的运行：' : 'Pick a run from the sidebar, or start a new one from your terminal:')) + '</p>'
+      + (msg ? '' : '<pre id="wcmd" title="' + (lang === 'zh' ? '点击复制' : 'Click to copy') + '">pitwall run --repo &lt;path&gt; --goal "…" --auto</pre>') + '</div>';
+    var w = $('wcmd');
+    if (w) w.onclick = function () { if (navigator.clipboard) navigator.clipboard.writeText('pitwall run --repo <path> --goal "…" --auto'); toast(t('copied')); };
+  }
+
+  // ---- live stream with self-healing reconnect (dedups by seq; no double-append on retry)
+  var lastSeq = 0, es = null, reconnT = null;
+  function connectStream() {
+    if (es) { try { es.close(); } catch (e) {} }
+    es = new EventSource(api('/api/stream?since=' + lastSeq));
+    es.onopen = function () { $('offbar').classList.remove('show'); };
+    es.onmessage = function (m) {
+      var env = JSON.parse(m.data);
+      if (env.seq <= lastSeq) return;
+      lastSeq = env.seq; allEvents.push(env); appendEvent(env); scheduleRefetch();
+    };
+    es.onerror = function () {
+      $('offbar').classList.add('show');
+      try { es.close(); } catch (e) {}
+      if (reconnT) return;
+      reconnT = setTimeout(function () { reconnT = null; connectStream(); }, 2000);
+    };
+  }
 })();
 </script>
 </body>
