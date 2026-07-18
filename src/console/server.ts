@@ -219,6 +219,10 @@ async function handle(primary: ConsoleBackend, req: IncomingMessage, res: Server
         const it = Number(body.iterate ?? 0);
         if (Number.isInteger(it) && it > 0) args.push('--iterate', String(Math.min(it, 20)));
       }
+      const drv = String(body.driver ?? '').trim();
+      const rev = String(body.reviewer ?? '').trim();
+      if (drv) args.push('--driver', drv);
+      if (rev) args.push('--reviewer', rev);
       const log = join(tmpdir(), `pitwall-run-${Date.now()}.log`);
       const out = openSync(log, 'a');
       const child = spawn(process.execPath, args, { detached: true, stdio: ['ignore', out, out] });

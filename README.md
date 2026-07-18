@@ -132,6 +132,31 @@ Anytime, in either mode: `pitwall tell` routes a directive to one agent or
 all, as a supplement or an override, at the next turn boundary or immediately
 with `--interrupt` — always with a delivery receipt in the timeline.
 
+## Agents
+
+Two tiers, the way Orca does it:
+
+- **Deep adapters** — `claude-code` and `codex` get vendor-native session
+  resume (memory across turns), token/cost telemetry, and a live tool stream
+  in the console.
+- **Any terminal agent** — `cmd:<shell template>` runs anything that runs in
+  a terminal, one process per turn: `{prompt}` is shell-quoted into the
+  command (or fed via stdin), `{repo}` is the repository path, stdout is the
+  reply. Gemini CLI, Qwen Code, OpenCode, aider, your own script — if it
+  reads a prompt and prints an answer, it can hold a seat:
+
+```sh
+pitwall run --goal "…" \
+  --driver codex \
+  --reviewer 'cmd:gemini -p {prompt}'
+```
+
+Honest limits of the `cmd:` tier: no session memory between turns (every
+Pitwall prompt is self-contained, so the protocol still works), no usage
+telemetry, and no enforced sandbox — give write seats only to agents you
+trust in that repository. Deep adapters for more vendors are on the roadmap;
+ACP will collapse this whole problem when it lands.
+
 **Autonomous mode** (`--auto`) removes the waiting without removing you: every
 gate still appears on the timeline, but the system resolves it as `allow`
 after a beat, so the run never blocks. You can still pause, direct, overrule

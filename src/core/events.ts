@@ -25,7 +25,12 @@ export interface Envelope<E extends RunEvent = RunEvent> {
 // ---------------------------------------------------------------------------
 // Agents
 
-export type AdapterKind = 'claude-code' | 'codex';
+/** 'claude-code' and 'codex' are deep adapters (native session resume, usage,
+ * tool stream). Any other value must start with 'cmd:' followed by a shell
+ * template — the generic adapter runs it once per turn ({prompt} placeholder,
+ * or the prompt on stdin) and treats stdout as the reply. That is how any
+ * terminal-runnable agent (Gemini CLI, Qwen Code, OpenCode, aider, …) plugs in. */
+export type AdapterKind = 'claude-code' | 'codex' | (string & {});
 
 export interface AgentSpec {
   /** Unique within the run, e.g. "claude", "codex", "claude-reviewer". */

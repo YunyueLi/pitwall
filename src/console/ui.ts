@@ -484,6 +484,11 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .sw.on::after { transform: translateX(15px); }
   .swrow .swl { font-size: 13px; color: var(--ink); }
   .swrow .swh { font-size: 11px; color: var(--ink3); }
+  .fadv { margin-top: 16px; }
+  .fadv summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--ink3); }
+  .fadv summary::-webkit-details-marker { display: none; }
+  .fadv summary::before { content: "›"; display: inline-block; width: 12px; transition: transform .15s; }
+  .fadv[open] summary::before { transform: rotate(90deg); }
 
   /* home board */
   .board { padding: 8px 0 60px; animation: fade .5s var(--spring) both; }
@@ -655,6 +660,11 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     <div><label class="fl" id="lIter" for="nfIter"></label><input type="number" id="nfIter" min="0" max="20" value="0"><div class="fh" id="hIter"></div></div>
   </div>
   <div class="swrow"><button class="sw on" id="nfAuto" role="switch" aria-checked="true"></button><span><span class="swl" id="lAuto"></span><div class="swh" id="hAuto"></div></span></div>
+  <details class="fadv" id="nfAdv"><summary id="lAdv"></summary>
+    <label class="fl" id="lDrv" for="nfDrv"></label><input type="text" id="nfDrv" spellcheck="false" placeholder="claude-code · codex · cmd:gemini -p {prompt}">
+    <label class="fl" id="lRev" for="nfRev"></label><input type="text" id="nfRev" spellcheck="false" placeholder="claude-code · codex · cmd:…">
+    <div class="fh" id="hAdv"></div>
+  </details>
   <div class="ferr" id="nfErr"></div>
   <div class="facts"><button class="pbtn" id="nfGo"><span id="nfGoT"></span><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button></div>
 </div></div></div>
@@ -840,6 +850,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     $('lIter').textContent = t('Self-opened goals'); $('hIter').textContent = t('0 keeps the engineer from opening new goals.');
     $('lAuto').textContent = t('Autonomous mode'); $('hAuto').textContent = t('Gates auto-approve; you can still step in at any moment.');
     $('nfGoT').textContent = t('Start run');
+    $('lAdv').textContent = lang === 'zh' ? '高级选项：自选代理' : 'Advanced: choose the agents';
+    $('lDrv').textContent = lang === 'zh' ? '实现方（写权限）' : 'Implementer (write access)';
+    $('lRev').textContent = lang === 'zh' ? '评审方（只读）' : 'Reviewer (read-only)';
+    $('hAdv').textContent = lang === 'zh'
+      ? '留空用默认组合（codex 实现 + claude 评审）。cmd: 开头可接任意终端代理，{prompt} 为提示词占位。'
+      : 'Leave empty for the default pair (codex builds, claude reviews). cmd: plugs in any terminal agent; {prompt} is the prompt placeholder.';
     $('nfGoal').placeholder = lang === 'zh' ? '想让团队完成什么？' : 'What should the team accomplish?';
     $('nfRepo').placeholder = '/Users/…';
     [].forEach.call($('langSeg').children, function (b) { b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
@@ -1027,7 +1043,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var repo = $('nfRepo').value.trim(), goal = $('nfGoal').value.trim();
     if (!repo || !goal) { $('nfErr').textContent = lang === 'zh' ? '仓库路径与目标都是必填。' : 'Repository path and goal are both required.'; return; }
     var criteria = $('nfCrit').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
-    var body = { repo: repo, goal: goal, criteria: criteria, mode: nfMode, auto: nfAuto, iterate: Number($('nfIter').value) || 0 };
+    var body = { repo: repo, goal: goal, criteria: criteria, mode: nfMode, auto: nfAuto, iterate: Number($('nfIter').value) || 0, driver: $('nfDrv').value.trim(), reviewer: $('nfRev').value.trim() };
     $('nfGo').disabled = true;
     fetch('/api/runs/new', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json(); })

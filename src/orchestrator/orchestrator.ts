@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import type { AgentAdapter } from '../adapters/types.js';
 import { ClaudeAdapter } from '../adapters/claude.js';
 import { CodexAdapter } from '../adapters/codex.js';
+import { GenericCliAdapter } from '../adapters/generic.js';
 import type { AgentSpec, Envelope, RunEvent, Origin } from '../core/events.js';
 import { newId } from '../core/ids.js';
 import { Ledger } from '../core/ledger.js';
@@ -1159,7 +1160,8 @@ export class Orchestrator {
 function makeAdapter(spec: AgentSpec, repo: string): AgentAdapter {
   if (spec.adapter === 'claude-code') return new ClaudeAdapter(spec, repo);
   if (spec.adapter === 'codex') return new CodexAdapter(spec, repo);
-  throw new Error(`unknown adapter kind: ${spec.adapter}`);
+  if (spec.adapter.startsWith('cmd:')) return new GenericCliAdapter(spec, repo);
+  throw new Error(`unknown adapter kind: ${spec.adapter} (use claude-code, codex, or cmd:<shell template>)`);
 }
 
 function extractCriteria(history: Envelope[]): string[] {

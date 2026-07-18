@@ -33,8 +33,11 @@ Options for run:
   --repo <dir>            Target repository (default: cwd)
   --goal <text>           The goal (required)
   --criteria <text>       Completion criterion, repeatable
-  --driver <kind>         claude-code | codex (default: claude-code)
-  --reviewer <kind>       claude-code | codex (default: codex)
+  --driver <kind>         claude-code | codex | cmd:<shell template> (default: claude-code)
+  --reviewer <kind>       claude-code | codex | cmd:<shell template> (default: codex)
+                          cmd: runs any terminal agent once per turn — {prompt} is
+                          shell-quoted in, or fed via stdin; stdout is the reply.
+                          e.g. --reviewer 'cmd:gemini -p {prompt}'
   --driver-model <m>      Model override for the driver
   --reviewer-model <m>    Model override for the reviewer
   --max-rounds <n>        Max review rounds before forcing human decision (default: 3)
@@ -92,10 +95,15 @@ async function main(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function agentSpec(kind: string, seat: 'driver' | 'reviewer', role: string, model?: string): AgentSpec {
-  if (kind !== 'claude-code' && kind !== 'codex') {
-    throw new Error(`unknown adapter "${kind}" (use claude-code or codex)`);
+  let name: string;
+  if (kind === 'claude-code') name = 'claude';
+  else if (kind === 'codex') name = 'codex';
+  else if (kind.startsWith('cmd:')) {
+    const first = kind.slice(4).trim().split(/\s+/)[0] ?? '';
+    name = (first.split('/').pop() ?? '').replace(/[^\w.-]/g, '').slice(0, 24) || 'agent';
+  } else {
+    throw new Error(`unknown adapter "${kind}" (use claude-code, codex, or cmd:<shell template> for any terminal agent)`);
   }
-  const name = kind === 'claude-code' ? 'claude' : 'codex';
   return {
     name,
     adapter: kind,
