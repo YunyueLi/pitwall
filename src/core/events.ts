@@ -93,6 +93,9 @@ export interface RunCreated {
   /** Autonomous mode: gates auto-resolve, the run never blocks on a human.
    * Humans can still watch, direct and overrule at any moment. */
   autonomous?: boolean;
+  /** Autonomous iteration: after each accepted goal, the engineer may open up
+   * to this many further goals itself (team mode + autonomous only). */
+  iterate?: number;
 }
 
 export type RunStatus = 'running' | 'paused' | 'awaiting-review' | 'done' | 'failed';

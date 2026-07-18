@@ -17,6 +17,7 @@ import {
   directorPlanPrompt,
   directorReviewPrompt,
   driverPrompt,
+  engineerProposePrompt,
   engineerTaskPrompt,
   parseAgentReply,
   recoveryPreamble,
@@ -40,6 +41,9 @@ export interface RunConfig {
    * human. The gates still appear on the timeline; a human can still watch,
    * pause, direct and overrule at any moment — they are just not required. */
   autonomous?: boolean;
+  /** Autonomous iteration: after each accepted goal the engineer may open up
+   * to this many further goals itself (team mode + autonomous only). */
+  iterate?: number;
 }
 
 const HUMAN: Origin = { kind: 'human' };
@@ -66,6 +70,7 @@ export class Orchestrator {
   private pausedAgents = new Set<string>();
   private runPaused = false;
   private stopping = false;
+  private iterationEndReason?: string;
   private waiters: (() => void)[] = [];
   private gitBaseline = new Map<string, string>();
 
@@ -99,6 +104,7 @@ export class Orchestrator {
       agents: [config.driver, config.reviewer],
       engineVersion,
       autonomous: config.autonomous || undefined,
+      iterate: config.iterate || undefined,
     });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.driver });
     orch.append(SYSTEM, { type: 'agent.registered', spec: config.reviewer });
@@ -116,7 +122,7 @@ export class Orchestrator {
     return orch;
   }
 
-  static resume(runId: string, overrides: Partial<Pick<RunConfig, 'maxReviewRounds' | 'turnTimeoutMs' | 'autonomous'>> = {}): Orchestrator {
+  static resume(runId: string, overrides: Partial<Pick<RunConfig, 'maxReviewRounds' | 'turnTimeoutMs' | 'autonomous' | 'iterate'>> = {}): Orchestrator {
     const dir = runDir(runId);
     const { ledger, history } = openRun(dir);
     const created = history.find((e) => e.event.type === 'run.created')?.event;
@@ -131,6 +137,7 @@ export class Orchestrator {
       maxReviewRounds: overrides.maxReviewRounds ?? 3,
       turnTimeoutMs: overrides.turnTimeoutMs ?? 20 * 60 * 1000,
       autonomous: overrides.autonomous ?? created.autonomous ?? false,
+      iterate: overrides.iterate ?? created.iterate ?? 0,
     };
     const orch = new Orchestrator(dir, runId, ledger, history, config);
     // Close out turns that were in flight when the previous process died.
@@ -277,10 +284,11 @@ export class Orchestrator {
       const step = this.config.mode === 'team' ? await this.teamStep(state) : await this.pairStep(state);
 
       if (step === 'done') {
+        if (await this.maybeOpenNextGoal()) continue; // the engineer opened the next goal
         this.append(SYSTEM, {
           type: 'run.status',
           status: 'done',
-          reason: this.config.autonomous ? 'accepted (autonomous mode)' : 'accepted by human',
+          reason: this.iterationEndReason ?? (this.config.autonomous ? 'accepted (autonomous mode)' : 'accepted by human'),
         });
         return;
       }
@@ -364,8 +372,10 @@ export class Orchestrator {
     const batchSeq = this.lastTaskCreatedSeq();
 
     // 1. Apply ledger-derived gate decisions (survives crashes and restarts).
+    // A goal opened after the acceptance (autonomous iteration) voids it.
+    const doneBar = Math.max(batchSeq, this.lastGoalSeq());
     const milestone = this.newestGate('acceptance');
-    if (milestone?.resolved === 'allow' && milestone.resolvedSeq! > batchSeq) return 'done';
+    if (milestone?.resolved === 'allow' && milestone.resolvedSeq! > doneBar) return 'done';
 
     const planGate = this.newestGate('plan');
     if (planGate?.resolved === 'deny') {
@@ -442,6 +452,62 @@ export class Orchestrator {
     if (!runnable) return 'wait';
     if (this.pausedAgents.has(engineer.name)) return 'wait';
     return this.engineerTurn(state, runnable);
+  }
+
+  /** Autonomous iteration: after an accepted goal, let the engineer propose
+   * and open the next one (bounded by config.iterate). The proposal itself is
+   * a normal turn — it lands on the ledger, folds in any pending directives,
+   * and the human can pause or overrule at any point. Returns true when a new
+   * goal was opened and the loop should continue. */
+  private async maybeOpenNextGoal(): Promise<boolean> {
+    if (this.stopping || this.config.mode !== 'team' || !this.config.autonomous) return false;
+    const total = this.config.iterate ?? 0;
+    const opened = this.agentGoalCount();
+    if (opened >= total) return false;
+    const engineer = this.config.driver;
+    const state = this.state();
+    if (this.pausedAgents.has(engineer.name) || this.runPaused) return false;
+    const newDirectives = pendingDirectivesFor(state, engineer.name);
+    const prompt = engineerProposePrompt({
+      mission: state.goalHistory[0]?.text ?? this.config.goal,
+      completedGoals: state.goalHistory.map((g) => g.text),
+      remaining: total - opened,
+      standingDirectives: this.standingFor(state, engineer.name, newDirectives),
+      newDirectives,
+      recovery: this.recoveryTextFor(engineer.name),
+    });
+    const { result, reply } = await this.executeTurn(engineer.name, prompt, newDirectives.map((d) => d.directiveId));
+    if (result.outcome !== 'ok') return false; // end the run normally; resume can retry
+    this.append(
+      { kind: 'agent', agent: engineer.name },
+      { type: 'message', messageId: newId('msg'), from: engineer.name, to: 'human', kind: 'handoff', text: result.finalText },
+    );
+    const j = reply.json ?? {};
+    const next = typeof j.next_goal === 'string' ? j.next_goal.trim().slice(0, 600) : '';
+    if (!next || j.done === true) {
+      this.iterationEndReason = 'mission complete; the engineer opened no further goal';
+      return false;
+    }
+    // Retire the finished goal's tasks so the next plan starts from a clean board.
+    for (const t of state.tasks.values()) {
+      if (t.status !== 'superseded') {
+        this.append(SYSTEM, { type: 'task.updated', taskId: t.taskId, status: 'superseded', note: 'goal completed; superseded by the next goal' });
+      }
+    }
+    if (Array.isArray(j.criteria)) this.config.criteria = j.criteria.map(String).slice(0, 6);
+    this.append({ kind: 'agent', agent: engineer.name }, { type: 'goal.updated', text: next, mode: 'override' });
+    return true;
+  }
+
+  private agentGoalCount(): number {
+    return this.history.filter((env) => env.event.type === 'goal.updated' && env.origin.kind === 'agent').length;
+  }
+
+  private lastGoalSeq(): number {
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      if (this.history[i]!.event.type === 'goal.updated') return this.history[i]!.seq;
+    }
+    return 0;
   }
 
   private async directorPlanTurn(state: RunState): Promise<StepResult> {

@@ -128,3 +128,32 @@ test('autonomous mode: a system-origin allow resolves a gate exactly like a huma
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('autonomous iteration: an agent-opened goal supersedes the old board and voids the old acceptance', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pw-iter-'));
+  try {
+    const { ledger } = Ledger.open(dir);
+    ledger.append({ kind: 'system' }, { type: 'run.created', runId: 'r1', goal: 'goal one', repo: '/tmp/r', agents: [], engineVersion: 't', mode: 'team', autonomous: true, iterate: 1 } as any);
+    ledger.append({ kind: 'agent', agent: 'claude' }, { type: 'task.created', taskId: 't1', title: 'A', description: '', criteria: [], assignee: 'codex', dependsOn: [] } as any);
+    ledger.append({ kind: 'system' }, { type: 'task.updated', taskId: 't1', status: 'accepted' } as any);
+    ledger.append({ kind: 'system' }, { type: 'approval.requested', approvalId: 'ap1', gate: 'acceptance', summary: 'done' } as any);
+    ledger.append({ kind: 'system' }, { type: 'approval.resolved', approvalId: 'ap1', decision: 'allow', note: 'auto-approved (autonomous mode)' } as any);
+
+    // what Orchestrator.maybeOpenNextGoal appends
+    ledger.append({ kind: 'system' }, { type: 'task.updated', taskId: 't1', status: 'superseded', note: 'goal completed; superseded by the next goal' } as any);
+    ledger.append({ kind: 'agent', agent: 'codex' }, { type: 'goal.updated', text: 'goal two', mode: 'override' } as any);
+
+    const history = readLedgerFile(join(dir, 'events.jsonl'));
+    const s = reduce(history);
+    assert.equal(currentGoal(s), 'goal two', 'the agent-opened goal is current');
+    assert.equal(s.tasks.get('t1')!.status, 'superseded', 'the finished board is retired');
+    const agentGoals = history.filter((e) => e.event.type === 'goal.updated' && e.origin.kind === 'agent').length;
+    assert.equal(agentGoals, 1, 'iteration count is derivable from the ledger');
+    const goalSeq = history.filter((e) => e.event.type === 'goal.updated').pop()!.seq;
+    const acceptSeq = history.find((e) => e.event.type === 'approval.resolved')!.seq;
+    assert.ok(goalSeq > acceptSeq, 'the new goal outranks the old acceptance, so the loop replans instead of finishing');
+    ledger.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

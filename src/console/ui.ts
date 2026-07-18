@@ -131,11 +131,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .srow:hover { background: var(--fill2); color: var(--ink); }
   .srow svg { width: 15px; height: 15px; flex: none; opacity: .72; }
   .srow .kbd { margin-left: auto; font: 500 10px/1 var(--mono); color: var(--ink3); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 3px 5px; background: var(--surface); }
-  .sfilter { display: none; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--live-line), 0 0 0 3px var(--live-fill); }
-  .sfilter svg { width: 15px; height: 15px; flex: none; color: var(--ink3); }
-  .sfilter input { border: none; background: none; outline: none; font-size: 13px; color: var(--ink); width: 100%; }
-  .side.filtering .sfilter { display: flex; }
-  .side.filtering #searchRow { display: none; }
   .grp { display: flex; align-items: center; gap: 6px; width: 100%; padding: 18px 10px 7px; font-size: 11px; color: var(--ink3); font-weight: 500; white-space: nowrap; }
   .grp.flag { color: var(--flag); font-weight: 600; }
   .grp .cnt { margin-left: auto; font-family: var(--mono); color: var(--ink4); }
@@ -402,10 +397,49 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   body.no-run .rail, body.no-run .composer, body.no-run .convhead, body.no-run .railtoggle, body.no-run .edgeR { display: none; }
   body.no-run .app { --cr: 0px; }
 
+  /* diff dialog */
+  .dlgwrap { position: fixed; inset: 0; z-index: 70; display: none; }
+  body.dlg-open .dlgwrap { display: block; }
+  .dscrim { position: absolute; inset: 0; background: rgba(15,13,10,.32); animation: dfade .22s var(--ease) both; }
+  @keyframes dfade { from { opacity: 0; } to { opacity: 1; } }
+  .dlg { position: absolute; top: 6vh; left: 50%; transform: translateX(-50%); width: min(880px, 94vw); max-height: 86vh; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-l); display: flex; flex-direction: column; overflow: hidden; animation: rise .45s var(--spring) both; }
+  .dlg .dhd { display: flex; align-items: center; gap: 10px; padding: 11px 10px 11px 18px; border-bottom: 1px solid var(--hair); flex: none; }
+  .dlg .dhd .k { font-size: 11px; color: var(--ink3); flex: none; }
+  .dlg .dhd .p { font: 560 12.5px var(--mono); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dlg .dhd .sp { flex: 1; }
+  .xbtn { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--ink3); font-size: 13px; flex: none; }
+  .xbtn:hover { background: var(--fill2); color: var(--ink); }
+  .dbody { overflow: auto; padding: 10px 0 18px; }
+  .dline { padding: 0 18px; font: 11.5px/1.7 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink2); }
+  .dline.add { background: color-mix(in srgb, var(--ok) 9%, transparent); color: color-mix(in srgb, var(--ok) 72%, var(--ink)); }
+  .dline.del { background: color-mix(in srgb, var(--bad) 9%, transparent); color: color-mix(in srgb, var(--bad) 65%, var(--ink)); }
+  .dline.hunk { color: var(--live); padding-top: 10px; }
+  .dline.dmeta2 { color: var(--ink3); }
+  .dline.meta { color: var(--ink3); padding-top: 14px; font-weight: 600; }
+  .dempty { padding: 28px 18px; color: var(--ink3); font-size: 13px; display: flex; gap: 10px; align-items: center; }
+  .frow { cursor: pointer; border-radius: 8px; padding-left: 6px; padding-right: 6px; margin: 0 -6px; transition: background .14s var(--ease); }
+  .frow:hover { background: var(--fill); }
+
+  /* command palette */
+  .palwrap { position: fixed; inset: 0; z-index: 72; display: none; }
+  body.pal-open .palwrap { display: block; }
+  .pal { position: absolute; top: 14vh; left: 50%; transform: translateX(-50%); width: min(600px, 92vw); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-l); overflow: hidden; animation: palin .35s var(--spring) both; }
+  @keyframes palin { from { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(.98); } to { opacity: 1; transform: translateX(-50%); } }
+  .pal .pin { display: flex; align-items: center; gap: 11px; padding: 14px 16px; border-bottom: 1px solid var(--hair); }
+  .pal .pin svg { width: 16px; height: 16px; color: var(--ink3); flex: none; }
+  .pal input { flex: 1; border: none; background: none; outline: none; font-size: 14.5px; color: var(--ink); }
+  .pal input::placeholder { color: var(--ink3); }
+  .plist { max-height: 46vh; overflow-y: auto; padding: 8px; }
+  .pgrp { font-size: 10.5px; color: var(--ink3); font-weight: 500; padding: 9px 10px 5px; }
+  .pitem { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 11px; border-radius: 9px; font-size: 13.5px; color: var(--ink); }
+  .pitem .sub { margin-left: auto; font-size: 11px; color: var(--ink3); flex: none; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pitem.sel { background: var(--fill2); }
+  .pempty { padding: 18px 12px 22px; color: var(--ink3); font-size: 13px; }
+
   .toast { position: fixed; bottom: 108px; left: 50%; transform: translateX(-50%) translateY(14px); z-index: 50; background: var(--ink); color: var(--paper); font-size: 12.5px; padding: 9px 16px; border-radius: 999px; box-shadow: var(--shadow-l); opacity: 0; pointer-events: none; transition: opacity .3s var(--ease), transform .4s var(--spring); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* responsive — kept last so these rules win the cascade over the base rules above */
+  /* responsive - kept last so these rules win the cascade over the base rules above */
   @media (max-width: 1180px) {
     .app { grid-template-columns: var(--cl) 1fr; grid-template-areas: "side head" "side main"; }
     .rail, .railtoggle, .edgeR { display: none; }
@@ -456,7 +490,6 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     </div>
     <button class="srow" id="newRow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="lb" id="tNew"></span></button>
     <button class="srow" id="searchRow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="lb" id="tSearch"></span><span class="kbd">⌘K</span></button>
-    <div class="sfilter" id="sfilter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="filterIn" type="text"></div>
     <div id="runlist"></div>
     <div class="foot">
       <button class="acct" id="acctBtn">
@@ -521,6 +554,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     </div>
   </div>
 </div>
+<div class="dlgwrap" id="dlgWrap"><div class="dscrim" id="dlgScrim"></div><div class="dlg"><div class="dhd"><span class="k" id="dlgKind"></span><span class="p" id="dlgPath"></span><span class="sp"></span><button class="xbtn" id="dlgClose" aria-label="close">✕</button></div><div class="dbody" id="dlgBody"></div></div></div>
+<div class="palwrap" id="palWrap"><div class="dscrim" id="palScrim"></div><div class="pal"><div class="pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="palIn" type="text" autocomplete="off" spellcheck="false"></div><div class="plist" id="palList"></div></div></div>
 <div class="scrim" id="scrim"></div>
 <div class="offbar" id="offbar"><span class="spin"></span><span id="offtxt"></span></div>
 <div class="toast" id="toast"></div>
@@ -535,7 +570,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   // ---- i18n
   var ZH = {
-    'Pause': '暂停', 'Resume': '继续', 'New run': '新建运行', 'Search runs': '搜索运行',
+    'Pause': '暂停', 'Resume': '继续', 'New run': '新建运行', 'Search & commands': '搜索与命令',
     'running': '运行中', 'paused': '已暂停', 'done': '已完成', 'failed': '失败', 'awaiting-review': '待验收',
     'team': '团队', 'pair': '结对', 'idle': '空闲', 'working': '工作中', 'dead': '无响应',
     'director': '总监', 'engineer': '工程师', 'driver': '实现', 'reviewer': '评审',
@@ -565,6 +600,13 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     'This run is read-only. Take control from the terminal with pitwall resume.': '该运行为只读，如需操作，请在终端运行 pitwall resume。',
     'Nothing running yet.': '暂无运行。', 'copied': '已复制',
     'Reconnecting…': '连接中断，正在重连…', 'Jump to latest': '回到最新', 'Thinking': '思考中', 'Working': '工作中',
+    'opened next goal': '开启下一个目标', 'iteration': '迭代',
+    'Type a command or search runs…': '输入命令，或搜索运行……', 'Actions': '动作', 'Runs': '运行', 'No matches.': '没有匹配项。',
+    'Pause run': '暂停运行', 'Resume run': '继续运行', 'Approve pending gate': '通过当前待批', 'Reject pending gate': '驳回当前待批',
+    'Toggle sidebar': '折叠 / 展开侧栏', 'Toggle panel': '折叠 / 展开右栏', 'Show execution steps': '显示 / 隐藏执行细节',
+    'Theme: light': '主题：浅色', 'Theme: dark': '主题：深色', 'Theme: system': '主题：跟随系统',
+    'Language: 中文 / English': '语言：中文 / English', 'View working-tree diff': '查看全部代码改动', 'Open GitHub repo': '打开 GitHub 仓库',
+    'Changes to': '改动', 'No changes.': '暂无改动。', 'diff': '代码改动',
     'just now': '刚刚', 'm ago': ' 分钟前', 'h ago': ' 小时前', 'd ago': ' 天前'
   };
   var SYS = [
@@ -584,6 +626,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     [/^accepted by human$/, '人类已验收'], [/^task accepted by human$/, '人类已验收'],
     [/^accepted \(autonomous mode\)$/, '已验收（自主模式）'],
     [/^auto-approved \(autonomous mode\)$/, '自动放行（自主模式）'],
+    [/^mission complete; the engineer opened no further goal$/, '任务已达成，工程师未再开启新目标'],
+    [/^goal completed; superseded by the next goal$/, '目标已完成，由下一个目标接替'],
     [/^resumed from ledger$/, '已从账本恢复'], [/^recovered$/, '已恢复'],
     [/^paused by human$/, '被人类暂停'], [/^resumed by human$/, '被人类恢复'], [/^unpaused by human$/, '被人类恢复'],
     [/^orchestrator stopped$/, '编排器已停止'],
@@ -658,11 +702,11 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   var interrupt = false, mode = 'supplement';
   function applyStatic() {
     document.documentElement.lang = lang;
-    $('tNew').textContent = t('New run'); $('tSearch').textContent = t('Search runs');
+    $('tNew').textContent = t('New run'); $('tSearch').textContent = t('Search & commands');
     $('secRoom').textContent = t('Conversation'); $('secTasks').textContent = t('Plan');
     $('secAgents').textContent = t('Agents'); $('secCrit').textContent = t('Criteria'); $('secFiles').textContent = t('Changes');
     $('identity').textContent = t('Local · you'); $('brandSub').textContent = lang === 'zh' ? '指挥席' : 'PIT WALL';
-    $('filterIn').placeholder = lang === 'zh' ? '搜索运行……' : 'Search runs…';
+    $('palIn').placeholder = t('Type a command or search runs…');
     $('noiseChip').textContent = t(showNoise ? 'hide steps' : 'show steps');
     $('dirText').placeholder = t('Add guidance, change direction, or overrule…');
     $('dirHint').textContent = t(interrupt ? 'Aborts the current turn and re-delivers immediately.' : 'Lands at the next turn boundary, with a delivery receipt.');
@@ -698,20 +742,85 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   $('rail').addEventListener('mouseleave', function () { if (document.body.classList.contains('rail-off')) $('rail').classList.remove('peek'); });
   document.addEventListener('keydown', function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key === '\\') { e.preventDefault(); toggleSide(); }
-    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); openFilter(); }
-    if (e.key === 'Escape' && $('side').classList.contains('filtering')) closeFilter();
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); if (document.body.classList.contains('pal-open')) closePal(); else openPal(); }
+    if (e.key === 'Escape') { if (document.body.classList.contains('pal-open')) closePal(); else if (document.body.classList.contains('dlg-open')) closeDiff(); }
   });
-  function openFilter() { if (document.body.classList.contains('side-off')) { spinMark(); document.body.classList.remove('side-off'); } $('side').classList.add('filtering'); $('filterIn').focus(); }
-  function closeFilter() { $('side').classList.remove('filtering'); $('filterIn').value = ''; applyFilter(''); }
-  $('searchRow').onclick = openFilter;
+  $('searchRow').onclick = function () { openPal(); };
   $('newRow').onclick = function () { var cmd = 'pitwall run --repo <path> --goal "…" --criteria "…"'; if (navigator.clipboard) navigator.clipboard.writeText(cmd); toast(lang === 'zh' ? '在终端启动新运行（命令已复制）' : 'Start a run from your terminal (command copied)'); };
-  $('filterIn').addEventListener('input', function () { applyFilter(this.value); });
-  $('filterIn').addEventListener('blur', function () { if (!this.value) closeFilter(); });
-  function applyFilter(q) {
-    q = q.trim().toLowerCase();
-    [].forEach.call(document.querySelectorAll('#runlist .runrow'), function (r) { r.style.display = !q || r.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none'; });
-    [].forEach.call(document.querySelectorAll('#runlist .grp'), function (g) { g.style.display = q ? 'none' : ''; });
+
+  // ---- diff viewer
+  function diffLine(l) {
+    var cls = 'dline';
+    if (l.indexOf('diff --git') === 0 || l.indexOf('new file') === 0 || l.indexOf('deleted file') === 0) cls += ' meta';
+    else if (l.indexOf('index ') === 0 || l.indexOf('+++') === 0 || l.indexOf('---') === 0 || l.indexOf('similarity') === 0 || l.indexOf('rename') === 0) cls += ' dmeta2';
+    else if (l.indexOf('@@') === 0) cls += ' hunk';
+    else if (l.charAt(0) === '+') cls += ' add';
+    else if (l.charAt(0) === '-') cls += ' del';
+    return '<div class="' + cls + '">' + (esc(l) || ' ') + '</div>';
   }
+  function openDiff(path) {
+    document.body.classList.add('dlg-open');
+    $('dlgKind').textContent = t('diff');
+    $('dlgPath').textContent = path || (state && state.repo ? state.repo.split('/').pop() : '');
+    $('dlgBody').innerHTML = '<div class="dempty"><span class="spin"></span></div>';
+    fetch(api('/api/diff' + (path ? '?path=' + encodeURIComponent(path) : '')))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var txt = (d && d.diff) || '';
+        if (!txt.trim()) { $('dlgBody').innerHTML = '<div class="dempty">' + t('No changes.') + '</div>'; return; }
+        $('dlgBody').innerHTML = txt.split('\n').map(diffLine).join('');
+      })
+      .catch(function () { $('dlgBody').innerHTML = '<div class="dempty">' + t('No changes.') + '</div>'; });
+  }
+  function closeDiff() { document.body.classList.remove('dlg-open'); }
+  $('dlgClose').onclick = closeDiff; $('dlgScrim').onclick = closeDiff;
+  $('files').addEventListener('click', function (ev) { var r = ev.target.closest('.frow'); if (!r) return; openDiff(r.getAttribute('data-path') || ''); });
+
+  // ---- command palette (⌘K): actions first, then runs
+  var palItems = [], palSel = 0, runsCache = [];
+  function setTheme(m) { localStorage.setItem('pitwall-theme', m); applyTheme(); drawSpark(); }
+  function palActions() {
+    var a = [];
+    var pend = state ? state.approvals.filter(function (x) { return !x.decision; }) : [];
+    if (state && !state.readonly) {
+      a.push({ label: t(state.status === 'paused' ? 'Resume run' : 'Pause run'), run: function () { post('/api/run-pause', { paused: !(state.status === 'paused') }); } });
+      if (pend.length) {
+        a.push({ label: t('Approve pending gate'), sub: tSys(pend[0].summary), run: function () { post('/api/approval', { approvalId: pend[0].approvalId, decision: 'allow' }); } });
+        a.push({ label: t('Reject pending gate'), run: function () { post('/api/approval', { approvalId: pend[0].approvalId, decision: 'deny' }); } });
+      }
+    }
+    if (state && state.runId) a.push({ label: t('View working-tree diff'), run: function () { openDiff(''); } });
+    a.push({ label: t('Toggle sidebar'), sub: '⌘\\', run: toggleSide });
+    a.push({ label: t('Toggle panel'), run: function () { $('railBtn').click(); } });
+    a.push({ label: t('Show execution steps'), run: function () { $('noiseChip').click(); } });
+    a.push({ label: t('Theme: light'), run: function () { setTheme('light'); } });
+    a.push({ label: t('Theme: dark'), run: function () { setTheme('dark'); } });
+    a.push({ label: t('Theme: system'), run: function () { setTheme('auto'); } });
+    a.push({ label: t('Language: 中文 / English'), run: function () { switchLang(lang === 'zh' ? 'en' : 'zh'); } });
+    a.push({ label: t('Open GitHub repo'), run: function () { window.open('https://github.com/YunyueLi/pitwall', '_blank'); } });
+    return a;
+  }
+  function openPal() { document.body.classList.add('pal-open'); $('palIn').value = ''; palRender(''); setTimeout(function () { $('palIn').focus(); }, 30); }
+  function closePal() { document.body.classList.remove('pal-open'); }
+  function palRender(q) {
+    q = q.trim().toLowerCase();
+    var acts = palActions().filter(function (a) { return !q || a.label.toLowerCase().indexOf(q) >= 0; });
+    var runs = runsCache.filter(function (r) { return !q || String(r.goal || r.runId).toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+    palItems = []; var html = '';
+    if (acts.length) { html += '<div class="pgrp">' + t('Actions') + '</div>' + acts.map(function (a) { var i = palItems.length; palItems.push(a); return '<button class="pitem" data-pi="' + i + '"><span>' + esc(a.label) + '</span>' + (a.sub ? '<span class="sub">' + esc(a.sub) + '</span>' : '') + '</button>'; }).join(''); }
+    if (runs.length) { html += '<div class="pgrp">' + t('Runs') + '</div>' + runs.map(function (r) { var i = palItems.length; palItems.push({ run: function () { var qd = '?run=' + encodeURIComponent(r.runId); if (urlLang) qd += '&lang=' + urlLang; location.href = '/' + qd; } }); return '<button class="pitem" data-pi="' + i + '"><span>' + esc(r.goal || r.runId) + '</span><span class="sub">' + esc(t(r.status)) + '</span></button>'; }).join(''); }
+    if (!palItems.length) html = '<div class="pempty">' + t('No matches.') + '</div>';
+    $('palList').innerHTML = html; palSel = 0; palPaint();
+  }
+  function palPaint() { [].forEach.call(document.querySelectorAll('.pitem'), function (el, i) { el.classList.toggle('sel', i === palSel); }); var s = document.querySelector('.pitem.sel'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest' }); }
+  $('palIn').addEventListener('input', function () { palRender(this.value); });
+  $('palIn').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); palSel = Math.min(palSel + 1, palItems.length - 1); palPaint(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); palSel = Math.max(palSel - 1, 0); palPaint(); }
+    else if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); var it = palItems[palSel]; if (it) { closePal(); it.run(); } }
+  });
+  $('palList').addEventListener('click', function (ev) { var b = ev.target.closest('.pitem'); if (!b) return; var it = palItems[Number(b.getAttribute('data-pi'))]; if (it) { closePal(); it.run(); } });
+  $('palScrim').onclick = closePal;
 
   // ---- sparkline (live throughput)
   var spData = []; for (var i = 0; i < 44; i++) spData.push(4 + Math.random() * 3);
@@ -743,14 +852,17 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   var RUNI = {
     want: '<svg viewBox="0 0 18 18"><rect x="5" y="5" width="8" height="8" rx="2" transform="rotate(45 9 9)" fill="var(--flag)"/></svg>',
     live: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="var(--ok)" stroke-width="1.6"/><circle cx="9" cy="9" r="3" fill="var(--ok)"><animate attributeName="opacity" values="1;.35;1" dur="1.8s" repeatCount="indefinite"/></circle></svg>',
+    off: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="none" stroke="var(--line2)" stroke-width="1.6" stroke-dasharray="3 3"/></svg>',
     done: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.8" fill="none" stroke="var(--line2)" stroke-width="1.6"/><path d="M5.9 9.2l2.1 2.1 4.1-4.5" fill="none" stroke="var(--ink3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     fail: '<svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.8" fill="none" stroke="var(--bad)" stroke-width="1.6"/><path d="M6.5 6.5l5 5M11.5 6.5l-5 5" stroke="var(--bad)" stroke-width="1.5" stroke-linecap="round"/></svg>'
   };
   function runRow(r, curId) {
-    var icon = r.pending ? RUNI.want : r.status === 'failed' ? RUNI.fail : (r.status === 'done' ? RUNI.done : (r.live ? RUNI.live : RUNI.done));
+    var stale = !r.live && (r.status === 'running' || r.status === 'paused');
+    var icon = r.pending ? RUNI.want : r.status === 'failed' ? RUNI.fail : r.status === 'done' ? RUNI.done : stale ? RUNI.off : r.live ? RUNI.live : RUNI.done;
     var prog = r.tasksTotal ? r.tasksDone + '/' + r.tasksTotal : (r.costUsd ? money(r.costUsd) : ago(r.createdAt));
     var meta = r.pending ? '<span class="want">' + (lang === 'zh' ? r.pending + ' 项待批准' : r.pending + ' pending') + '</span>'
       : (r.live && r.status === 'running') ? '<span class="lv"><span class="dot running" style="width:5px;height:5px"></span>' + t('live') + '</span>'
+      : stale ? esc(lang === 'zh' ? '已离线，可恢复' : 'offline · resumable')
       : esc(t(r.status));
     return '<button class="runrow' + (r.runId === curId ? ' cur' : '') + (r.status === 'done' || r.status === 'failed' ? ' done-run' : '') + '" data-run="' + esc(r.runId) + '">'
       + '<span class="r1"><span class="si">' + icon + '</span><span class="g">' + esc(r.goal || r.runId) + '</span></span>'
@@ -764,7 +876,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     function grp(cls, label, arr) { if (!arr.length) return ''; return '<div class="grp ' + cls + '">' + esc(label) + '<span class="cnt">' + arr.length + '</span></div>' + arr.map(function (r) { return runRow(r, curId); }).join(''); }
     setHtml('runlist', grp('flag', t('Needs you'), you) + grp('', t('In progress'), live) + grp('', t('Finished'), fin));
   }
-  function loadRuns() { fetch('/api/runs').then(function (r) { return r.json(); }).then(renderRuns).catch(function () {}); }
+  function loadRuns() { fetch('/api/runs').then(function (r) { return r.json(); }).then(function (list) { runsCache = list || []; renderRuns(runsCache); }).catch(function () {}); }
   $('runlist').addEventListener('click', function (ev) { var b = ev.target.closest('.runrow'); if (!b) return; var q = '?run=' + encodeURIComponent(b.getAttribute('data-run')); if (urlLang) q += '&lang=' + urlLang; location.href = '/' + q; });
 
   // ---- header + telemetry + rail
@@ -793,6 +905,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     $('teleState').className = 'w' + (isWorking ? ' shimmer' : '');
     $('teleState').textContent = isWorking ? (lang === 'zh' ? word + ' 工作中…' : word + ' working…') : word;
     var sub = [t(s.mode)]; if (s.autonomous) sub.push(lang === 'zh' ? '自主模式' : 'autonomous');
+    if (s.iterate) sub.push(t('iteration') + ' ' + (s.goalsOpened || 0) + '/' + s.iterate);
     setHtml('teleSub', esc(sub.join(' · ')) + (s.statusReason ? '<div>' + esc(tSys(s.statusReason)) + '</div>' : ''));
 
     var cost = 0, tok = 0, turns = 0;
@@ -824,7 +937,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var files = [], seenF = {};
     (s.files || []).forEach(function (f) { var p = relPath(f.path); if (seenF[p] != null) { if (f.kind) files[seenF[p]].kind = f.kind; } else { seenF[p] = files.length; files.push({ path: p, kind: f.kind }); } });
     $('filesSec').style.display = files.length ? '' : 'none';
-    if (files.length) { $('fileCount').textContent = files.length; setHtml('files', files.slice(-40).map(function (f) { var k = f.kind || 'modified', L = k === 'added' ? 'A' : k === 'deleted' ? 'D' : 'M'; return '<div class="frow"><span class="fkind ' + k + '">' + L + '</span><span class="fp">' + esc(f.path) + '</span></div>'; }).join('')); }
+    if (files.length) { $('fileCount').textContent = files.length; setHtml('files', files.slice(-40).map(function (f) { var k = f.kind || 'modified', L = k === 'added' ? 'A' : k === 'deleted' ? 'D' : 'M'; return '<div class="frow" data-path="' + esc(f.path) + '" title="' + (lang === 'zh' ? '查看改动' : 'View diff') + '"><span class="fkind ' + k + '">' + L + '</span><span class="fp">' + esc(f.path) + '</span></div>'; }).join('')); }
 
     setHtml('decisions', pend.map(function (a) {
       return '<div class="decision"><div class="core"><div class="k"><span class="di"></span>' + esc(gateLabel(a.gate)) + '</div>'
@@ -910,6 +1023,10 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
   function humanBlock(env) {
     var e = env.event;
+    if (e.type === 'goal.updated' && env.origin && env.origin.kind === 'agent') {
+      var an = env.origin.agent || 'agent';
+      return '<div class="msg"><div class="head">' + avatar(an, false) + '<span class="n">' + esc(an) + '</span><span class="tag hm">' + t('opened next goal') + '</span><span class="t">' + tstr(env.ts) + '</span></div><div class="body rule hm">' + md(e.text) + '</div></div>';
+    }
     var label = e.type === 'directive' ? t('directive') + ' → ' + (e.scope === 'all' ? t('to all') : esc(e.scope)) + ' · ' + t(e.mode) + (e.interrupt ? ' · ' + t('interrupt') : '') : e.type === 'goal.updated' ? t('goal update') + ' · ' + t(e.mode) : t('note');
     return '<div class="msg"><div class="head">' + avatar('', true) + '<span class="n">' + t('You') + '</span><span class="tag hm">' + label + '</span><span class="t">' + tstr(env.ts) + '</span></div><div class="body rule hm">' + md(e.text) + '</div></div>';
   }
@@ -1009,11 +1126,13 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   fitViewport();
   applyStatic(); loadRuns(); drawSpark();
   if (sp.get('menu')) document.body.classList.add('acct-open');
+  if (sp.get('pal')) setTimeout(openPal, 200);
   setInterval(loadRuns, 30000);
   setInterval(function () { if (state) renderTop(state); }, 30000);
   fetch(api('/api/state')).then(function (r) { return r.json(); }).then(function (s) {
     if (!s || !s.runId) { showWelcome(); return; }
     renderState(s);
+    if (sp.get('diff') != null) openDiff(sp.get('diff'));
     if (isSnap) { fetch(api('/api/events?since=0')).then(function (r) { return r.json(); }).then(function (evs) { evs.forEach(function (env) { allEvents.push(env); appendEvent(env); }); }); return; }
     connectStream();
   }).catch(function () { showWelcome(lang === 'zh' ? '无法加载该运行，它可能已被移除。' : 'Could not load this run. It may have been removed.'); });

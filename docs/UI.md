@@ -1,4 +1,4 @@
-# Pitwall Console — UI design system (v5)
+# Pitwall Console — UI design system (v7)
 
 The console is the product-layer wrapper over the ledger. This note records the
 design decisions so contributors can extend it without eroding the aesthetic.
@@ -44,7 +44,27 @@ hairlines and elevation is soft shadow, never boxed frames.
 
 ## Theme & language
 
-`◐` cycles auto → light → dark (persisted; `?theme=` overrides). `EN/中文`
-toggles a full zh/en dictionary plus a regex table for ledger-generated phrases
-(persisted; `?lang=` overrides). `?snapshot=1` renders one static frame without
-opening the live stream (used for screenshots).
+Theme (light / dark / system) and language (中文 / English) live in the
+**account menu** at the sidebar foot — never on the main chrome — persisted,
+with `?theme=` / `?lang=` URL overrides. `?snapshot=1` renders one static
+frame without opening the live stream (used for screenshots).
+
+## Live feedback
+
+- **Thinking bubble** — a working agent appears in the conversation as its
+  vendor avatar plus a shimmering "thinking" line with bouncing dots, so the
+  document is never silently frozen.
+- **Reconnect pill** — if the event stream drops, a top-center pill says so
+  and the client resumes from the last received seq (no duplicated events).
+- **Jump to latest** — scrolling up never fights autoscroll; a pill above the
+  composer returns to the tail.
+
+## Command palette & diff
+
+- **⌘K** opens the command palette: actions first (pause/resume, approve or
+  reject the pending gate, working-tree diff, panel toggles, theme, language),
+  then fuzzy-matched runs. `?pal=1` deep-links it.
+- Clicking a file under **Changes** (or the palette's diff action) opens the
+  **diff dialog** — `git diff` against HEAD, additions/deletions tinted,
+  hunk headers in blue, untracked files rendered as all-added. `?diff=path`
+  deep-links one file's diff; readonly view servers serve it too.

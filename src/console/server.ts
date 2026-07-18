@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync, unwatchFile, watchFile } from 'node:fs';
 import { join } from 'node:path';
 import type { Orchestrator } from '../orchestrator/orchestrator.js';
@@ -164,6 +165,15 @@ async function handle(primary: ConsoleBackend, req: IncomingMessage, res: Server
       });
       return;
     }
+    if (req.method === 'GET' && url.pathname === '/api/diff') {
+      const p = url.searchParams.get('path') ?? '';
+      if (p.includes('..') || p.startsWith('/') || p.includes('\0')) {
+        json(res, 400, { error: 'bad path' });
+        return;
+      }
+      json(res, 200, { path: p, diff: gitDiff(orch.state().repo, p || undefined) });
+      return;
+    }
     if (req.method === 'GET' && url.pathname.startsWith('/api/raw/')) {
       const agent = decodeURIComponent(url.pathname.slice('/api/raw/'.length));
       if (!/^[\w.-]+$/.test(agent)) {
@@ -239,11 +249,14 @@ function serializeState(orch: ConsoleBackend): unknown {
   const s = orch.state();
   const events = orch.events();
   const created = events.find((e) => e.event.type === 'run.created')?.event;
+  const goalsOpened = events.filter((e) => e.event.type === 'goal.updated' && e.origin.kind === 'agent').length;
   return {
     runId: s.runId,
     repo: s.repo,
     mode: orch.mode(),
     autonomous: created?.type === 'run.created' ? !!created.autonomous : false,
+    iterate: created?.type === 'run.created' ? (created.iterate ?? 0) : 0,
+    goalsOpened,
     readonly: !!orch.readonly,
     startedTs: events[0]?.ts,
     lastTs: events[events.length - 1]?.ts,
@@ -274,6 +287,27 @@ function serializeState(orch: ConsoleBackend): unknown {
 
 function json(res: ServerResponse, code: number, data: unknown): void {
   res.writeHead(code, { 'content-type': 'application/json' }).end(JSON.stringify(data));
+}
+
+/** Read-only diff of the working tree against HEAD, optionally for one path.
+ * Untracked files come back as an all-added diff. Never throws. */
+function gitDiff(repo: string, path?: string): string {
+  const run = (args: string[]) => {
+    try {
+      return execFileSync('git', args, { cwd: repo, encoding: 'utf8', maxBuffer: 4_000_000, timeout: 5000 });
+    } catch (e: any) {
+      return typeof e?.stdout === 'string' ? e.stdout : ''; // diff --no-index exits 1 when files differ
+    }
+  };
+  const scope = path ? ['--', path] : [];
+  let out = run(['diff', 'HEAD', ...scope]);
+  if (!out.trim()) out = run(['diff', ...scope]);
+  if (!out.trim() && path) out = run(['diff', '--no-index', '--', '/dev/null', path]);
+  if (!out.trim() && !path) {
+    const untracked = run(['ls-files', '--others', '--exclude-standard']).trim();
+    if (untracked) out = untracked.split('\n').map((f: string) => run(['diff', '--no-index', '--', '/dev/null', f])).join('');
+  }
+  return out.length > 400_000 ? out.slice(0, 400_000) + '\n… (truncated)' : out;
 }
 
 function readBody(req: IncomingMessage): Promise<any> {

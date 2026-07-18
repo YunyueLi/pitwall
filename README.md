@@ -132,6 +132,19 @@ Anytime, in either mode: `pitwall tell` routes a directive to one agent or
 all, as a supplement or an override, at the next turn boundary or immediately
 with `--interrupt` — always with a delivery receipt in the timeline.
 
+**Autonomous mode** (`--auto`) removes the waiting without removing you: every
+gate still appears on the timeline, but the system resolves it as `allow`
+after a beat, so the run never blocks. You can still pause, direct, overrule
+or reject at any moment — a human decision always wins because it lands first.
+
+**Autonomous iteration** (`--auto --iterate <n>`, team mode) closes the loop:
+when a goal is accepted, the engineer itself proposes the next one — grounded
+in the original mission, recorded on the ledger like any other turn — and the
+team replans and builds it, up to `n` self-opened goals. The engineer is told
+that declaring the mission complete is a respected answer, so a bounded run
+ends itself instead of inventing work. You watch goals open on the timeline
+and steer with `pitwall tell` whenever you care to.
+
 ## Architecture
 
 ```

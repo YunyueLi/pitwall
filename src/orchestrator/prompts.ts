@@ -266,3 +266,40 @@ export function recoveryPreamble(originalInput: string): string {
     `--- END ORIGINAL TURN INSTRUCTIONS ---`,
   ].join('\n');
 }
+
+// ---------------------------------------------------------------------------
+// Autonomous iteration: after an accepted goal, the engineer proposes the next.
+
+export interface ProposeGoalContext {
+  mission: string;
+  completedGoals: string[];
+  remaining: number;
+  standingDirectives: DirectiveState[];
+  newDirectives: DirectiveState[];
+  recovery?: string;
+}
+
+export function engineerProposePrompt(ctx: ProposeGoalContext): string {
+  const parts: string[] = [];
+  parts.push(
+    `You are the engineer agent in an Pitwall team run operating in autonomous-iteration mode. The current goal has just been implemented, director-reviewed and accepted. The human authorized the team to open up to ${ctx.remaining} more goal${ctx.remaining === 1 ? '' : 's'} without waiting for them. Your job this turn: decide the single most valuable next goal for this repository, or declare the mission complete. Do NOT write any code this turn.`,
+  );
+  parts.push(PROVENANCE_RULES);
+  parts.push(`Original mission, set by the human (every goal you open must serve it; do not drift):\n${ctx.mission}`);
+  parts.push(`Goals completed so far in this run:\n` + ctx.completedGoals.map((g, i) => `${i + 1}. ${g}`).join('\n'));
+  for (const d of ctx.standingDirectives) parts.push(`Standing directive (your proposal must comply):\n${humanDirectiveBlock(d)}`);
+  for (const d of ctx.newDirectives) parts.push(`New directive:\n${humanDirectiveBlock(d)}`);
+  if (ctx.recovery) parts.push(ctx.recovery);
+  parts.push(
+    `Inspect the repository first (read files, run read-only checks). A good next goal is a vertical slice about the size of the previous one: concrete, independently verifiable, with 1-3 checkable criteria. Declare the mission complete instead if it is genuinely satisfied, or if anything further would be padding, speculative refactoring, or scope creep — stopping is a respected answer, not a failure.`,
+  );
+  parts.push(`End your reply with exactly one fenced code block tagged "pitwall" containing either:
+\`\`\`pitwall
+{"next_goal": "one concrete goal statement", "criteria": ["checkable statement", "…"], "why": "one sentence"}
+\`\`\`
+or, to end the run:
+\`\`\`pitwall
+{"done": true, "summary": "why the mission is complete"}
+\`\`\``);
+  return parts.join('\n\n');
+}

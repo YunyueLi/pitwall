@@ -42,6 +42,9 @@ Options for run:
   --auto                  Autonomous mode: gates auto-approve, the run never waits
                           for a human (you can still watch, direct and overrule).
                           On resume: --auto turns it on, --no-auto turns it off.
+  --iterate <n>           Autonomous iteration (team mode + --auto): after each
+                          accepted goal the engineer may open up to n further
+                          goals itself, bounded and steerable at any moment.
   --port <n>              Console port (default: random)
 `;
 
@@ -117,11 +120,17 @@ async function cmdRun(argv: string[]): Promise<void> {
       'max-rounds': { type: 'string', default: '3' },
       'turn-timeout': { type: 'string', default: '20' },
       auto: { type: 'boolean', default: false },
+      iterate: { type: 'string' },
       port: { type: 'string', default: '0' },
     },
   });
   if (!values.goal) throw new Error('--goal is required');
   if (values.mode !== 'pair' && values.mode !== 'team') throw new Error('--mode must be pair or team');
+  const iterate = values.iterate ? Number(values.iterate) : 0;
+  if (iterate && (!values.auto || values.mode !== 'team')) {
+    throw new Error('--iterate requires --auto and --mode team (the engineer opens goals only in the autonomous team loop)');
+  }
+  if (iterate < 0 || !Number.isInteger(iterate) || iterate > 20) throw new Error('--iterate must be an integer between 0 and 20');
   const mode = values.mode as 'pair' | 'team';
   const repo = resolve(values.repo ?? process.cwd());
   // team default: claude directs (plans/reviews, read-only), codex engineers.
@@ -143,6 +152,7 @@ async function cmdRun(argv: string[]): Promise<void> {
     maxReviewRounds: Number(values['max-rounds']),
     turnTimeoutMs: Number(values['turn-timeout']) * 60 * 1000,
     autonomous: !!values.auto,
+    iterate,
   };
   const orch = Orchestrator.create(config, VERSION);
   await serve(orch, Number(values.port));
@@ -151,7 +161,7 @@ async function cmdRun(argv: string[]): Promise<void> {
 async function cmdResume(argv: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
     args: argv,
-    options: { port: { type: 'string', default: '0' }, auto: { type: 'boolean' }, 'no-auto': { type: 'boolean' } },
+    options: { port: { type: 'string', default: '0' }, auto: { type: 'boolean' }, 'no-auto': { type: 'boolean' }, iterate: { type: 'string' } },
     allowPositionals: true,
   });
   const runId = resolveRunId(positionals[0]);
@@ -159,6 +169,7 @@ async function cmdResume(argv: string[]): Promise<void> {
   if (live) throw new Error(`run ${runId} already has a live orchestrator (pid ${live.pid})`);
   const orch = Orchestrator.resume(runId, {
     autonomous: values.auto ? true : values['no-auto'] ? false : undefined,
+    iterate: values.iterate != null ? Number(values.iterate) : undefined,
   });
   await serve(orch, Number(values.port));
 }
