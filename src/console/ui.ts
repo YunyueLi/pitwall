@@ -84,7 +84,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   @keyframes shim { to { background-position: -180% 0; } }
 
   /* shell */
-  .app { position: fixed; inset: 0; z-index: 2; display: grid; --cl: 260px; --cr: 340px;
+  .app { position: fixed; inset: 0; z-index: 2; display: grid; --cl: 260px; --cr: 400px;
     grid-template-columns: var(--cl) 1fr var(--cr); grid-template-rows: 52px 1fr;
     grid-template-areas: "side head head" "side main rail"; transition: grid-template-columns .34s var(--spring); }
   body.side-off .app { --cl: 64px; }
@@ -271,10 +271,38 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .steps .row .fb { border: 1px solid var(--line2); border-radius: 5px; padding: 0 5px; }
 
   /* rail */
-  .rail { grid-area: rail; background: var(--panel); border-left: 1px solid var(--hair); overflow-y: auto; padding: 20px 18px 44px; transition: transform .34s var(--spring); }
+  .rail { grid-area: rail; background: var(--panel); border-left: 1px solid var(--hair); overflow-y: auto; padding: 14px 18px 44px; transition: transform .34s var(--spring); }
+  .rtabs { display: flex; gap: 2px; background: var(--fill); border-radius: 11px; padding: 3px; margin-bottom: 16px; position: sticky; top: -14px; z-index: 5; backdrop-filter: blur(8px); }
+  .rtab { flex: 1; text-align: center; padding: 6px 2px; border-radius: 8px; font-size: 12px; color: var(--ink2); transition: color .15s, background .15s, box-shadow .15s; white-space: nowrap; }
+  .rtab:hover { color: var(--ink); }
+  .rtab.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s); font-weight: 560; }
+  .rpane { display: none; }
+  .rpane.on { display: block; }
+  /* activity feed */
+  .act { display: flex; flex-direction: column; gap: 1px; }
+  .actrow { display: flex; gap: 9px; padding: 6px 8px; border-radius: 9px; font: 11.5px/1.55 var(--mono); color: var(--ink2); align-items: baseline; }
+  .actrow:hover { background: var(--fill); }
+  .actrow .tm { color: var(--ink4); flex: none; font-size: 10.5px; }
+  .actrow .ic { flex: none; width: 14px; text-align: center; color: var(--ink3); }
+  .actrow.tool .ic { color: var(--live); }
+  .actrow.file .ic { color: var(--ok); }
+  .actrow.turn .ic { color: var(--ink4); }
+  .actrow .tx { overflow-wrap: anywhere; min-width: 0; }
+  .actrow .tx b { color: var(--ink); font-weight: 560; }
+  .actempty { padding: 20px 8px; color: var(--ink3); font-size: 12.5px; }
+  /* changes pane */
+  .chgdiff { margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .chgdiff .dbody { max-height: 60vh; }
+  .chgback { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink2); padding: 5px 10px; border-radius: 8px; margin-bottom: 4px; }
+  .chgback:hover { background: var(--fill2); color: var(--ink); }
+  /* terminal pane */
+  .termsel { display: flex; gap: 4px; margin-bottom: 10px; }
+  .term { background: var(--codebg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 6px 12px 12px; max-height: 62vh; overflow: auto; }
+  .term pre { margin: 0; font: 10.5px/1.65 var(--mono); color: var(--ink2); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .term .tln { display: block; }
   .edgeR { display: none; position: absolute; right: 0; top: 52px; bottom: 0; width: 16px; z-index: 14; }
   body.rail-off .edgeR { display: block; }
-  body.rail-off .rail { transform: translateX(101%); position: absolute; top: 52px; bottom: 0; right: 0; width: 340px; z-index: 35; }
+  body.rail-off .rail { transform: translateX(101%); position: absolute; top: 52px; bottom: 0; right: 0; width: 400px; z-index: 35; }
   body.rail-off .rail.peek { transform: none; box-shadow: var(--shadow-l); border-radius: 16px 0 0 16px; }
   .tele { padding: 5px; border-radius: 20px; background: linear-gradient(180deg, var(--fill2), transparent); box-shadow: var(--shadow-s); }
   .tele .core { border: 1px solid var(--line); border-radius: 16px; padding: 16px; background: var(--surface); box-shadow: var(--inset); }
@@ -334,7 +362,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .frow .fp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* composer */
-  .composer { position: absolute; left: 260px; right: 340px; bottom: 0; z-index: 12; padding: 16px 30px 20px; background: linear-gradient(180deg, transparent, var(--paper) 44%); pointer-events: none; transition: left .34s var(--spring), right .34s var(--spring); }
+  .composer { position: absolute; left: 260px; right: 400px; bottom: 0; z-index: 12; padding: 16px 30px 20px; background: linear-gradient(180deg, transparent, var(--paper) 44%); pointer-events: none; transition: left .34s var(--spring), right .34s var(--spring); }
   body.side-off .composer { left: 64px; }
   body.rail-off .composer { right: 0; }
   .cwrap { max-width: 704px; margin: 0 auto; pointer-events: auto; }
@@ -399,7 +427,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
   /* diff dialog */
   .dlgwrap { position: fixed; inset: 0; z-index: 70; display: none; }
-  body.dlg-open .dlgwrap { display: block; }
+  body.dlg-open #dlgWrap { display: block; }
+  body.form-open #formWrap { display: block; }
   .dscrim { position: absolute; inset: 0; background: rgba(15,13,10,.32); animation: dfade .22s var(--ease) both; }
   @keyframes dfade { from { opacity: 0; } to { opacity: 1; } }
   .dlg { position: absolute; top: 6vh; left: 50%; transform: translateX(-50%); width: min(880px, 94vw); max-height: 86vh; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-l); display: flex; flex-direction: column; overflow: hidden; animation: rise .45s var(--spring) both; }
@@ -435,6 +464,51 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .pitem .sub { margin-left: auto; font-size: 11px; color: var(--ink3); flex: none; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pitem.sel { background: var(--fill2); }
   .pempty { padding: 18px 12px 22px; color: var(--ink3); font-size: 13px; }
+
+  /* new-run form */
+  .form { padding: 6px 20px 20px; overflow-y: auto; }
+  .form .fl { display: block; font-size: 12px; color: var(--ink2); font-weight: 560; margin: 16px 0 6px; }
+  .form .fh { font-size: 11px; color: var(--ink3); margin-top: 5px; line-height: 1.5; }
+  .form input[type=text], .form textarea { width: 100%; border: 1px solid var(--line2); border-radius: 10px; background: var(--paper); padding: 9px 12px; font: 13.5px/1.5 var(--sans); color: var(--ink); outline: none; transition: border-color .18s, box-shadow .18s; resize: vertical; }
+  .form input[type=text]:focus, .form textarea:focus { border-color: var(--live); box-shadow: 0 0 0 3px var(--live-fill); }
+  .form .frow2 { display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap; }
+  .form .frow2 > div { flex: 1; min-width: 150px; }
+  .form .seg { margin-top: 0; }
+  .form .ferr { color: var(--bad); font-size: 12px; margin-top: 12px; min-height: 16px; }
+  .form .facts { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .form input[type=number] { width: 74px; border: 1px solid var(--line2); border-radius: 10px; background: var(--paper); padding: 9px 10px; font: 13.5px var(--sans); color: var(--ink); outline: none; }
+  .swrow { display: flex; align-items: center; gap: 10px; padding: 9px 0 0; }
+  .sw { position: relative; width: 36px; height: 21px; border-radius: 999px; background: var(--fill2); transition: background .2s; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 2.5px; left: 2.5px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-s); transition: transform .25s var(--spring); }
+  .sw.on { background: var(--live); }
+  .sw.on::after { transform: translateX(15px); }
+  .swrow .swl { font-size: 13px; color: var(--ink); }
+  .swrow .swh { font-size: 11px; color: var(--ink3); }
+
+  /* home board */
+  .board { padding: 8px 0 60px; animation: fade .5s var(--spring) both; }
+  .board .bhead { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; }
+  .board .bhead h2 { font-size: 20px; font-weight: 660; letter-spacing: -.015em; margin: 0; }
+  .board .bhead .sub { font-size: 12.5px; color: var(--ink3); }
+  .board .bhead .sp { flex: 1; }
+  .bnew { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: var(--ink); color: var(--paper); font-size: 13px; font-weight: 560; box-shadow: var(--shadow-m); transition: transform .35s var(--spring), box-shadow .25s; }
+  .bnew:hover { transform: translateY(-1px); box-shadow: var(--shadow-l); }
+  .bnew svg { width: 14px; height: 14px; }
+  .bgrp { margin-bottom: 26px; }
+  .bgrp .bgh { font-size: 11px; color: var(--ink3); font-weight: 500; margin-bottom: 10px; display: flex; gap: 6px; align-items: baseline; }
+  .bgrp .bgh .n { font-family: var(--mono); color: var(--ink4); }
+  .bgrp.flagged .bgh { color: var(--flag); font-weight: 600; }
+  .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .bcard { text-align: left; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px 15px 12px; box-shadow: var(--shadow-s); transition: transform .3s var(--spring), box-shadow .25s, border-color .2s; display: flex; flex-direction: column; gap: 10px; min-height: 108px; }
+  .bcard:hover { transform: translateY(-2px); box-shadow: var(--shadow-m); border-color: var(--line2); }
+  .bcard .bg1 { display: flex; align-items: flex-start; gap: 9px; }
+  .bcard .si { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+  .bcard .si svg { width: 15px; height: 15px; }
+  .bcard .g { font-size: 13px; line-height: 1.45; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .bcard .bg2 { margin-top: auto; display: flex; align-items: center; gap: 8px; font: 10.5px var(--mono); color: var(--ink3); }
+  .bcard .bg2 .want { color: var(--flag); font-family: var(--sans); font-weight: 600; }
+  .bcard .bg2 .lv { color: var(--ok); display: inline-flex; gap: 5px; align-items: center; }
+  .bcard .bg2 .sp { flex: 1; }
 
   .toast { position: fixed; bottom: 108px; left: 50%; transform: translateX(-50%) translateY(14px); z-index: 50; background: var(--ink); color: var(--paper); font-size: 12.5px; padding: 9px 16px; border-radius: 999px; box-shadow: var(--shadow-l); opacity: 0; pointer-events: none; transition: opacity .3s var(--ease), transform .4s var(--spring); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -526,17 +600,33 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   </main>
 
   <aside class="rail" id="rail">
-    <div class="tele"><div class="core">
-      <div class="ts"><span class="dot" id="hdot"></span><span class="w" id="teleState"></span><button class="pausebtn" id="pauseBtn" title="Pause"></button></div>
-      <div class="tsub" id="teleSub"></div>
-      <canvas class="spark" id="spark"></canvas>
-      <div class="tgrid" id="teleGrid"></div>
-      <div class="tbar"><div id="pfill" style="width:0%"></div></div>
-    </div></div>
-    <div class="rsec"><div class="rh"><span id="secTasks"></span><span class="n" id="taskCount"></span></div><div id="tlist"></div></div>
-    <div class="rsec" id="agentsSec"><div class="rh" id="secAgents"></div><div id="agents"></div></div>
-    <div class="rsec" id="critSec"><div class="rh" id="secCrit"></div><ol class="criteria" id="criteria"></ol></div>
-    <div class="rsec" id="filesSec" style="display:none"><div class="rh"><span id="secFiles"></span><span class="n" id="fileCount"></span></div><div id="files"></div></div>
+    <div class="rtabs" id="rtabs">
+      <button class="rtab on" data-tab="overview" id="rtOverview"></button>
+      <button class="rtab" data-tab="activity" id="rtActivity"></button>
+      <button class="rtab" data-tab="changes" id="rtChanges"></button>
+      <button class="rtab" data-tab="term" id="rtTerm"></button>
+    </div>
+    <div class="rpane on" data-pane="overview">
+      <div class="tele"><div class="core">
+        <div class="ts"><span class="dot" id="hdot"></span><span class="w" id="teleState"></span><button class="pausebtn" id="pauseBtn" title="Pause"></button></div>
+        <div class="tsub" id="teleSub"></div>
+        <canvas class="spark" id="spark"></canvas>
+        <div class="tgrid" id="teleGrid"></div>
+        <div class="tbar"><div id="pfill" style="width:0%"></div></div>
+      </div></div>
+      <div class="rsec"><div class="rh"><span id="secTasks"></span><span class="n" id="taskCount"></span></div><div id="tlist"></div></div>
+      <div class="rsec" id="agentsSec"><div class="rh" id="secAgents"></div><div id="agents"></div></div>
+      <div class="rsec" id="critSec"><div class="rh" id="secCrit"></div><ol class="criteria" id="criteria"></ol></div>
+    </div>
+    <div class="rpane" data-pane="activity"><div class="act" id="actFeed"></div></div>
+    <div class="rpane" data-pane="changes">
+      <div id="chgHome"><div class="rh" style="display:flex;align-items:baseline;margin-bottom:11px"><span id="secFiles"></span><span class="n" id="fileCount" style="margin-left:auto;font-family:var(--mono);color:var(--ink4)"></span></div><div id="files"></div><div class="actempty" id="filesEmpty" style="display:none"></div></div>
+      <div id="chgView" style="display:none"><button class="chgback" id="chgBack">‹ <span id="chgBackT"></span></button><div class="chgdiff"><div class="dbody" id="chgBody"></div></div></div>
+    </div>
+    <div class="rpane" data-pane="term">
+      <div class="termsel" id="termSel"></div>
+      <div class="term" id="termBox"><pre id="termOut"></pre></div>
+    </div>
   </aside>
 
   <div class="composer" id="composer">
@@ -556,6 +646,18 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 </div>
 <div class="dlgwrap" id="dlgWrap"><div class="dscrim" id="dlgScrim"></div><div class="dlg"><div class="dhd"><span class="k" id="dlgKind"></span><span class="p" id="dlgPath"></span><span class="sp"></span><button class="xbtn" id="dlgClose" aria-label="close">✕</button></div><div class="dbody" id="dlgBody"></div></div></div>
 <div class="palwrap" id="palWrap"><div class="dscrim" id="palScrim"></div><div class="pal"><div class="pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="palIn" type="text" autocomplete="off" spellcheck="false"></div><div class="plist" id="palList"></div></div></div>
+<div class="dlgwrap" id="formWrap"><div class="dscrim" id="formScrim"></div><div class="dlg" style="width:min(640px,94vw)"><div class="dhd"><span class="k" id="nfTitle" style="font-size:13px;color:var(--ink);font-weight:600"></span><span class="sp"></span><button class="xbtn" id="formClose" aria-label="close">✕</button></div><div class="form">
+  <label class="fl" id="lRepo" for="nfRepo"></label><input type="text" id="nfRepo" spellcheck="false"><div class="fh" id="hRepo"></div>
+  <label class="fl" id="lGoal" for="nfGoal"></label><textarea id="nfGoal" rows="3"></textarea>
+  <label class="fl" id="lCrit" for="nfCrit"></label><textarea id="nfCrit" rows="2"></textarea><div class="fh" id="hCrit"></div>
+  <div class="frow2">
+    <div><label class="fl" id="lMode"></label><div class="seg" id="nfModeSeg"><button data-m="team" class="on" id="nfMTeam"></button><button data-m="pair" id="nfMPair"></button></div></div>
+    <div><label class="fl" id="lIter" for="nfIter"></label><input type="number" id="nfIter" min="0" max="20" value="0"><div class="fh" id="hIter"></div></div>
+  </div>
+  <div class="swrow"><button class="sw on" id="nfAuto" role="switch" aria-checked="true"></button><span><span class="swl" id="lAuto"></span><div class="swh" id="hAuto"></div></span></div>
+  <div class="ferr" id="nfErr"></div>
+  <div class="facts"><button class="pbtn" id="nfGo"><span id="nfGoT"></span><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button></div>
+</div></div></div>
 <div class="scrim" id="scrim"></div>
 <div class="offbar" id="offbar"><span class="spin"></span><span id="offtxt"></span></div>
 <div class="toast" id="toast"></div>
@@ -607,6 +709,14 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     'Theme: light': '主题：浅色', 'Theme: dark': '主题：深色', 'Theme: system': '主题：跟随系统',
     'Language: 中文 / English': '语言：中文 / English', 'View working-tree diff': '查看全部代码改动', 'Open GitHub repo': '打开 GitHub 仓库',
     'Changes to': '改动', 'No changes.': '暂无改动。', 'diff': '代码改动',
+    'Overview': '总览', 'Activity': '活动', 'Diffs': '改动', 'Terminal': '终端',
+    'No activity yet.': '暂无活动。', 'No output yet.': '暂无输出。', 'No file changes yet.': '尚无文件改动。',
+    'Repository path': '仓库路径', 'Absolute path to a local repository.': '本机仓库的绝对路径。',
+    'Goal': '目标', 'Acceptance criteria': '验收标准', 'One per line; review and acceptance judge against these.': '每行一条，评审与验收都以此为准。',
+    'Collaboration': '协作模式', 'Self-opened goals': '自主迭代数', '0 keeps the engineer from opening new goals.': '0 表示不自主开启新目标。',
+    'Autonomous mode': '自主模式', 'Gates auto-approve; you can still step in at any moment.': '门自动放行，你随时可以介入、改道或否决。',
+    'Start run': '启动运行', 'Run started. It will appear in the sidebar shortly.': '运行已启动，稍后会出现在左侧列表。',
+    'All runs': '全部运行', 'runs': '个运行', 'One board for every run on this machine.': '这台机器上所有运行，尽在一板。',
     'just now': '刚刚', 'm ago': ' 分钟前', 'h ago': ' 小时前', 'd ago': ' 天前'
   };
   var SYS = [
@@ -719,6 +829,19 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     $('amAbout').textContent = 'Pitwall · Apache-2.0';
     $('offtxt').textContent = t('Reconnecting…');
     $('jumpTxt').textContent = t('Jump to latest');
+    $('rtOverview').textContent = t('Overview'); $('rtActivity').textContent = t('Activity');
+    $('rtChanges').textContent = t('Diffs'); $('rtTerm').textContent = t('Terminal');
+    $('filesEmpty').textContent = t('No file changes yet.'); $('chgBackT').textContent = t('Diffs');
+    $('nfTitle').textContent = t('New run');
+    $('lRepo').textContent = t('Repository path'); $('hRepo').textContent = t('Absolute path to a local repository.');
+    $('lGoal').textContent = t('Goal'); $('lCrit').textContent = t('Acceptance criteria');
+    $('hCrit').textContent = t('One per line; review and acceptance judge against these.');
+    $('lMode').textContent = t('Collaboration'); $('nfMTeam').textContent = t('team'); $('nfMPair').textContent = t('pair');
+    $('lIter').textContent = t('Self-opened goals'); $('hIter').textContent = t('0 keeps the engineer from opening new goals.');
+    $('lAuto').textContent = t('Autonomous mode'); $('hAuto').textContent = t('Gates auto-approve; you can still step in at any moment.');
+    $('nfGoT').textContent = t('Start run');
+    $('nfGoal').placeholder = lang === 'zh' ? '想让团队完成什么？' : 'What should the team accomplish?';
+    $('nfRepo').placeholder = '/Users/…';
     [].forEach.call($('langSeg').children, function (b) { b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
     renderModeChip();
   }
@@ -743,10 +866,10 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   document.addEventListener('keydown', function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key === '\\') { e.preventDefault(); toggleSide(); }
     if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); if (document.body.classList.contains('pal-open')) closePal(); else openPal(); }
-    if (e.key === 'Escape') { if (document.body.classList.contains('pal-open')) closePal(); else if (document.body.classList.contains('dlg-open')) closeDiff(); }
+    if (e.key === 'Escape') { if (document.body.classList.contains('pal-open')) closePal(); else if (document.body.classList.contains('form-open')) closeForm(); else if (document.body.classList.contains('dlg-open')) closeDiff(); }
   });
   $('searchRow').onclick = function () { openPal(); };
-  $('newRow').onclick = function () { var cmd = 'pitwall run --repo <path> --goal "…" --criteria "…"'; if (navigator.clipboard) navigator.clipboard.writeText(cmd); toast(lang === 'zh' ? '在终端启动新运行（命令已复制）' : 'Start a run from your terminal (command copied)'); };
+  $('newRow').onclick = function () { openForm(); };
 
   // ---- diff viewer
   function diffLine(l) {
@@ -774,7 +897,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
   function closeDiff() { document.body.classList.remove('dlg-open'); }
   $('dlgClose').onclick = closeDiff; $('dlgScrim').onclick = closeDiff;
-  $('files').addEventListener('click', function (ev) { var r = ev.target.closest('.frow'); if (!r) return; openDiff(r.getAttribute('data-path') || ''); });
+  $('files').addEventListener('click', function (ev) { var r = ev.target.closest('.frow'); if (!r) return; chgShow(r.getAttribute('data-path') || ''); });
 
   // ---- command palette (⌘K): actions first, then runs
   var palItems = [], palSel = 0, runsCache = [];
@@ -821,6 +944,134 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   });
   $('palList').addEventListener('click', function (ev) { var b = ev.target.closest('.pitem'); if (!b) return; var it = palItems[Number(b.getAttribute('data-pi'))]; if (it) { closePal(); it.run(); } });
   $('palScrim').onclick = closePal;
+
+  // ---- workspace tabs (overview / activity / diffs / terminal)
+  var rtab = localStorage.getItem('pitwall-rtab') || 'overview';
+  function setTab(name) {
+    rtab = name; localStorage.setItem('pitwall-rtab', name);
+    [].forEach.call(document.querySelectorAll('.rtab'), function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === name); });
+    [].forEach.call(document.querySelectorAll('.rpane'), function (p) { p.classList.toggle('on', p.getAttribute('data-pane') === name); });
+    if (name === 'overview') setTimeout(drawSpark, 40);
+    if (name === 'activity') renderActivity(true);
+    if (name === 'term') { renderTermSel(); pollTerm(); }
+  }
+  $('rtabs').addEventListener('click', function (ev) { var b = ev.target.closest('.rtab'); if (b) setTab(b.getAttribute('data-tab')); });
+
+  // activity feed: the agent's computer, as a live stream of what it just did
+  var actDirty = true, actTimer = null;
+  function actRow(env) {
+    var e = env.event, tm = '<span class="tm">' + tstr(env.ts) + '</span>';
+    switch (e.type) {
+      case 'tool.used': return '<div class="actrow tool">' + tm + '<span class="ic">▸</span><span class="tx"><b>' + esc(e.agent) + '</b> ' + esc(e.tool) + ' · ' + esc(e.summary) + '</span></div>';
+      case 'files.changed': return '<div class="actrow file">' + tm + '<span class="ic">±</span><span class="tx">' + (e.agent ? '<b>' + esc(e.agent) + '</b> ' : '') + e.changes.map(function (c) { return esc(c.kind[0] + ' ' + relPath(c.path)); }).join(' · ') + '</span></div>';
+      case 'turn.started': return '<div class="actrow turn">' + tm + '<span class="ic">●</span><span class="tx"><b>' + esc(e.agent) + '</b> ' + t('starts a turn') + '</span></div>';
+      case 'turn.completed': { var b = ['<b>' + esc(e.agent) + '</b> ' + t('finished')]; if (e.durationMs != null) b.push(Math.round(e.durationMs / 1000) + 's'); var u = e.usage || {}; if (u.costUsd != null) b.push('$' + u.costUsd.toFixed(3)); return '<div class="actrow turn">' + tm + '<span class="ic">○</span><span class="tx">' + b.join(' · ') + '</span></div>'; }
+      default: return '';
+    }
+  }
+  function renderActivity(force) {
+    if (!force && !actDirty) return;
+    var pane = document.querySelector('[data-pane="activity"]'); if (!pane || !pane.classList.contains('on')) { return; }
+    actDirty = false;
+    var rows = [];
+    for (var i = Math.max(0, allEvents.length - 400); i < allEvents.length; i++) { var h = actRow(allEvents[i]); if (h) rows.push(h); }
+    setHtml('actFeed', rows.length ? rows.slice(-160).join('') : '<div class="actempty">' + t('No activity yet.') + '</div>');
+    var f = $('actFeed'); if (f.parentElement) $('rail').scrollTop = $('rail').scrollHeight;
+  }
+  function actTouch() { actDirty = true; if (actTimer) return; actTimer = setTimeout(function () { actTimer = null; renderActivity(); }, 350); }
+
+  // terminal: tail of the selected agent's raw vendor stream
+  var termAgent = '', termTimer = null;
+  function renderTermSel() {
+    if (!state) return;
+    if (!termAgent && state.agents.length) termAgent = state.agents[0].name;
+    setHtml('termSel', state.agents.map(function (a) { return '<button class="selchip' + (a.name === termAgent ? ' on' : '') + '" data-term="' + esc(a.name) + '">' + esc(a.name) + '</button>'; }).join(''));
+  }
+  $('termSel').addEventListener('click', function (ev) { var b = ev.target.closest('[data-term]'); if (!b) return; termAgent = b.getAttribute('data-term'); renderTermSel(); pollTerm(); });
+  function termVisible() { var p = document.querySelector('[data-pane="term"]'); return p && p.classList.contains('on') && !document.body.classList.contains('rail-off'); }
+  function pollTerm() {
+    if (termTimer) { clearTimeout(termTimer); termTimer = null; }
+    if (!termVisible() || !termAgent) return;
+    fetch(api('/api/raw/' + encodeURIComponent(termAgent) + '?n=120')).then(function (r) { return r.json(); }).then(function (d) {
+      var lines = (d.lines || []).map(function (l) { return l.length > 500 ? l.slice(0, 500) + '…' : l; });
+      var pre = $('termOut');
+      var txt = lines.join('\n') || t('No output yet.');
+      if (pre.textContent !== txt) { pre.textContent = txt; $('termBox').scrollTop = $('termBox').scrollHeight; }
+    }).catch(function () {}).then(function () { if (termVisible()) termTimer = setTimeout(pollTerm, 2500); });
+  }
+
+  // inline diff inside the Diffs pane
+  function chgShow(path) {
+    $('chgHome').style.display = 'none'; $('chgView').style.display = '';
+    $('chgBody').innerHTML = '<div class="dempty"><span class="spin"></span></div>';
+    fetch(api('/api/diff?path=' + encodeURIComponent(path))).then(function (r) { return r.json(); }).then(function (d) {
+      var txt = (d && d.diff) || '';
+      $('chgBody').innerHTML = txt.trim() ? txt.split('\n').map(diffLine).join('') : '<div class="dempty">' + t('No changes.') + '</div>';
+    }).catch(function () { $('chgBody').innerHTML = '<div class="dempty">' + t('No changes.') + '</div>'; });
+  }
+  $('chgBack').onclick = function () { $('chgView').style.display = 'none'; $('chgHome').style.display = ''; };
+
+  // ---- new-run form (spawns a real run through the server)
+  var nfMode = 'team', nfAuto = true;
+  function openForm() {
+    document.body.classList.add('form-open');
+    if (!$('nfRepo').value && state && state.repo) $('nfRepo').value = state.repo;
+    $('nfErr').textContent = '';
+    setTimeout(function () { $('nfGoal').focus(); }, 40);
+  }
+  function closeForm() { document.body.classList.remove('form-open'); }
+  $('formClose').onclick = closeForm; $('formScrim').onclick = closeForm;
+  $('nfModeSeg').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; nfMode = b.getAttribute('data-m'); [].forEach.call($('nfModeSeg').children, function (x) { x.classList.toggle('on', x === b); }); });
+  $('nfAuto').onclick = function () { nfAuto = !nfAuto; this.classList.toggle('on', nfAuto); this.setAttribute('aria-checked', String(nfAuto)); };
+  $('nfGo').onclick = function () {
+    var repo = $('nfRepo').value.trim(), goal = $('nfGoal').value.trim();
+    if (!repo || !goal) { $('nfErr').textContent = lang === 'zh' ? '仓库路径与目标都是必填。' : 'Repository path and goal are both required.'; return; }
+    var criteria = $('nfCrit').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+    var body = { repo: repo, goal: goal, criteria: criteria, mode: nfMode, auto: nfAuto, iterate: Number($('nfIter').value) || 0 };
+    $('nfGo').disabled = true;
+    fetch('/api/runs/new', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        $('nfGo').disabled = false;
+        if (d && d.error) { $('nfErr').textContent = d.error; return; }
+        closeForm(); $('nfGoal').value = ''; $('nfCrit').value = '';
+        toast(t('Run started. It will appear in the sidebar shortly.'));
+        setTimeout(loadRuns, 1800); setTimeout(loadRuns, 5000); setTimeout(loadRuns, 12000);
+      })
+      .catch(function () { $('nfGo').disabled = false; $('nfErr').textContent = lang === 'zh' ? '无法连接本地服务。' : 'Could not reach the local server.'; });
+  };
+
+  // ---- home board (no run selected): every run on this machine, as cards
+  function boardCard(r) {
+    var stale = !r.live && (r.status === 'running' || r.status === 'paused');
+    var icon = r.pending ? RUNI.want : r.status === 'failed' ? RUNI.fail : r.status === 'done' ? RUNI.done : stale ? RUNI.off : r.live ? RUNI.live : RUNI.done;
+    var meta = r.pending ? '<span class="want">' + (lang === 'zh' ? r.pending + ' 项待批准' : r.pending + ' pending') + '</span>'
+      : (r.live && r.status === 'running') ? '<span class="lv"><span class="dot running" style="width:5px;height:5px"></span>' + t('live') + '</span>'
+      : stale ? esc(lang === 'zh' ? '已离线，可恢复' : 'offline · resumable') : esc(t(r.status));
+    var prog = r.tasksTotal ? r.tasksDone + '/' + r.tasksTotal : ago(r.createdAt);
+    return '<button class="bcard" data-run="' + esc(r.runId) + '"><span class="bg1"><span class="si">' + icon + '</span><span class="g">' + esc(r.goal || r.runId) + '</span></span>'
+      + '<span class="bg2">' + meta + '<span class="sp"></span><span>' + esc(prog) + '</span>' + (r.costUsd ? '<span>' + esc(money(r.costUsd)) + '</span>' : '') + '</span></button>';
+  }
+  function renderBoard() {
+    if (!document.body.classList.contains('no-run')) return;
+    var list = runsCache;
+    if (!list.length) { showWelcome(); return; }
+    var you = [], live = [], fin = [];
+    list.forEach(function (r) { if (r.pending || r.status === 'awaiting-review') you.push(r); else if (r.status === 'done' || r.status === 'failed') fin.push(r); else live.push(r); });
+    function grp(cls, label, arr) { if (!arr.length) return ''; return '<div class="bgrp ' + cls + '"><div class="bgh">' + esc(label) + '<span class="n">' + arr.length + '</span></div><div class="bgrid">' + arr.map(boardCard).join('') + '</div></div>'; }
+    $('goal').textContent = '';
+    $('conv').innerHTML = '<div class="board">'
+      + '<div class="bhead"><h2>' + t('All runs') + '</h2><span class="sub">' + t('One board for every run on this machine.') + '</span><span class="sp"></span>'
+      + '<button class="bnew" id="boardNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' + t('New run') + '</button></div>'
+      + grp('flagged', t('Needs you'), you) + grp('', t('In progress'), live) + grp('', t('Finished'), fin) + '</div>';
+    var bn = $('boardNew'); if (bn) bn.onclick = openForm;
+  }
+  $('conv').addEventListener('click', function (ev) {
+    var c = ev.target.closest('.bcard');
+    if (c) { var q = '?run=' + encodeURIComponent(c.getAttribute('data-run')); if (urlLang) q += '&lang=' + urlLang; location.href = '/' + q; return; }
+    var pre = ev.target.closest('.body pre');
+    if (pre && navigator.clipboard) { navigator.clipboard.writeText(pre.textContent); toast(t('copied')); }
+  });
 
   // ---- sparkline (live throughput)
   var spData = []; for (var i = 0; i < 44; i++) spData.push(4 + Math.random() * 3);
@@ -876,7 +1127,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     function grp(cls, label, arr) { if (!arr.length) return ''; return '<div class="grp ' + cls + '">' + esc(label) + '<span class="cnt">' + arr.length + '</span></div>' + arr.map(function (r) { return runRow(r, curId); }).join(''); }
     setHtml('runlist', grp('flag', t('Needs you'), you) + grp('', t('In progress'), live) + grp('', t('Finished'), fin));
   }
-  function loadRuns() { fetch('/api/runs').then(function (r) { return r.json(); }).then(function (list) { runsCache = list || []; renderRuns(runsCache); }).catch(function () {}); }
+  function loadRuns() { fetch('/api/runs').then(function (r) { return r.json(); }).then(function (list) { runsCache = list || []; renderRuns(runsCache); if (document.body.classList.contains('no-run') && !homeMsg) renderBoard(); }).catch(function () {}); }
   $('runlist').addEventListener('click', function (ev) { var b = ev.target.closest('.runrow'); if (!b) return; var q = '?run=' + encodeURIComponent(b.getAttribute('data-run')); if (urlLang) q += '&lang=' + urlLang; location.href = '/' + q; });
 
   // ---- header + telemetry + rail
@@ -936,8 +1187,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
 
     var files = [], seenF = {};
     (s.files || []).forEach(function (f) { var p = relPath(f.path); if (seenF[p] != null) { if (f.kind) files[seenF[p]].kind = f.kind; } else { seenF[p] = files.length; files.push({ path: p, kind: f.kind }); } });
-    $('filesSec').style.display = files.length ? '' : 'none';
-    if (files.length) { $('fileCount').textContent = files.length; setHtml('files', files.slice(-40).map(function (f) { var k = f.kind || 'modified', L = k === 'added' ? 'A' : k === 'deleted' ? 'D' : 'M'; return '<div class="frow" data-path="' + esc(f.path) + '" title="' + (lang === 'zh' ? '查看改动' : 'View diff') + '"><span class="fkind ' + k + '">' + L + '</span><span class="fp">' + esc(f.path) + '</span></div>'; }).join('')); }
+    $('filesEmpty').style.display = files.length ? 'none' : '';
+    $('fileCount').textContent = files.length || '';
+    setHtml('files', files.slice(-60).map(function (f) { var k = f.kind || 'modified', L = k === 'added' ? 'A' : k === 'deleted' ? 'D' : 'M'; return '<div class="frow" data-path="' + esc(f.path) + '" title="' + (lang === 'zh' ? '查看改动' : 'View diff') + '"><span class="fkind ' + k + '">' + L + '</span><span class="fp">' + esc(f.path) + '</span></div>'; }).join(''));
 
     setHtml('decisions', pend.map(function (a) {
       return '<div class="decision"><div class="core"><div class="k"><span class="di"></span>' + esc(gateLabel(a.gate)) + '</div>'
@@ -972,12 +1224,21 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   $('tlist').addEventListener('click', function (ev) { var n = ev.target.closest('.trow'); if (!n) return; var id = n.getAttribute('data-task'); openTasks[id] = !openTasks[id]; n.classList.toggle('open'); });
 
   // ---- live thinking bubble (mirrors working agents into the conversation)
+  function lastToolLine(name) {
+    for (var i = allEvents.length - 1; i >= 0; i--) {
+      var e = allEvents[i].event;
+      if (e.type === 'turn.completed' && e.agent === name) return '';
+      if (e.type === 'tool.used' && e.agent === name) return '▸ ' + e.tool + ' · ' + e.summary;
+    }
+    return '';
+  }
   function renderThinking(s) {
     var box = $('thinking'); if (!box) return;
     var working = s.status === 'running' ? s.agents.filter(function (a) { return a.state === 'working'; }) : [];
     var html = working.map(function (a) {
       var role = a.role ? '<span class="r">' + esc(t(a.role)) + '</span>' : '';
-      var det = a.detail ? '<span class="thinkdet">' + esc(tSys(a.detail)) + '</span>' : '';
+      var tool = lastToolLine(a.name);
+      var det = tool ? '<span class="thinkdet">' + esc(tool) + '</span>' : (a.detail ? '<span class="thinkdet">' + esc(tSys(a.detail)) + '</span>' : '');
       var word = lang === 'zh' ? t('Thinking') : (a.name + ' · ' + t('Working'));
       return '<div class="msg thinking"><div class="head">' + avatar(a.name, false)
         + '<span class="n">' + esc(a.name) + '</span>' + role + '</div>'
@@ -1050,6 +1311,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   function appendEvent(env) {
     var e = env.event, conv = $('conv');
     var stick = nearBottom();
+    actTouch();
     if (!isPrimary(e)) {
       if (!curSteps) { var d = document.createElement('details'); d.className = 'steps'; if (showNoise) d.open = true; d.innerHTML = '<summary><span class="cv">›</span><span class="cs"></span></summary><div class="rows"></div>'; conv.appendChild(d); curSteps = { rows: d.querySelector('.rows'), cs: d.querySelector('.cs'), count: 0, secs: 0, cost: 0, agents: {} }; }
       var row = document.createElement('div'); row.className = 'row'; row.innerHTML = stepRow(env); curSteps.rows.appendChild(row); curSteps.count += 1;
@@ -1117,16 +1379,19 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   $('jumpBtn').onclick = function () { mainEl.scrollTo({ top: mainEl.scrollHeight, behavior: reduce ? 'auto' : 'smooth' }); };
   var refetch = null;
   function scheduleRefetch() { if (refetch) return; refetch = setTimeout(function () { refetch = null; fetch(api('/api/state')).then(function (r) { return r.json(); }).then(renderState); }, 250); }
-  function renderState(s) { state = s; s.agents.forEach(function (a, i) { agentIdx[a.name] = i % 2; }); renderTop(s); renderTasks(s); renderThinking(s); renderScopes(s); }
+  function renderState(s) { state = s; s.agents.forEach(function (a, i) { agentIdx[a.name] = i % 2; }); renderTop(s); renderTasks(s); renderThinking(s); renderScopes(s); if (rtab === 'term' && !$('termSel').children.length) { renderTermSel(); pollTerm(); } }
 
   applyTheme();
   var sp = new URLSearchParams(location.search);
   if (sp.get('side') === 'collapsed' || (sp.get('side') !== 'expanded' && localStorage.getItem('pitwall-side') === '1')) document.body.classList.add('side-off');
   if (sp.get('rail') === 'collapsed' || localStorage.getItem('pitwall-rail') === '1') document.body.classList.add('rail-off');
   fitViewport();
-  applyStatic(); loadRuns(); drawSpark();
+  applyStatic(); loadRuns(); drawSpark(); setTab(rtab);
   if (sp.get('menu')) document.body.classList.add('acct-open');
   if (sp.get('pal')) setTimeout(openPal, 200);
+  if (sp.get('form')) setTimeout(openForm, 250);
+  var tq = sp.get('tab');
+  if (tq === 'overview' || tq === 'activity' || tq === 'changes' || tq === 'term') setTab(tq);
   setInterval(loadRuns, 30000);
   setInterval(function () { if (state) renderTop(state); }, 30000);
   fetch(api('/api/state')).then(function (r) { return r.json(); }).then(function (s) {
@@ -1137,16 +1402,19 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     connectStream();
   }).catch(function () { showWelcome(lang === 'zh' ? '无法加载该运行，它可能已被移除。' : 'Could not load this run. It may have been removed.'); });
 
+  var homeMsg = null;
   function showWelcome(msg) {
+    homeMsg = msg || null;
     document.body.classList.add('no-run');
+    if (!msg && runsCache.length) { renderBoard(); return; }
     $('goal').textContent = '';
     var mk = document.querySelector('#mk svg');
     $('conv').innerHTML = '<div class="welcome"><span class="wmk">' + (mk ? mk.outerHTML : '') + '</span>'
       + '<h2>' + (lang === 'zh' ? '指挥席已就绪' : 'The pit wall is ready') + '</h2>'
-      + '<p>' + esc(msg || (lang === 'zh' ? '从左侧选择一个运行，或在终端启动一个新的运行：' : 'Pick a run from the sidebar, or start a new one from your terminal:')) + '</p>'
-      + (msg ? '' : '<pre id="wcmd" title="' + (lang === 'zh' ? '点击复制' : 'Click to copy') + '">pitwall run --repo &lt;path&gt; --goal "…" --auto</pre>') + '</div>';
-    var w = $('wcmd');
-    if (w) w.onclick = function () { if (navigator.clipboard) navigator.clipboard.writeText('pitwall run --repo <path> --goal "…" --auto'); toast(t('copied')); };
+      + '<p>' + esc(msg || (lang === 'zh' ? '还没有运行。让团队开始第一件事：' : 'No runs yet. Give the team its first job:')) + '</p>'
+      + (msg ? '' : '<button class="bnew" id="wNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' + t('New run') + '</button>') + '</div>';
+    var w = $('wNew');
+    if (w) w.onclick = openForm;
   }
 
   // ---- live stream with self-healing reconnect (dedups by seq; no double-append on retry)

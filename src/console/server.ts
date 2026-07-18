@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { execFileSync } from 'node:child_process';
-import { readFileSync, statSync, unwatchFile, watchFile } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { openSync, readFileSync, statSync, unwatchFile, watchFile } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Orchestrator } from '../orchestrator/orchestrator.js';
 import { layerOf, type Envelope } from '../core/events.js';
@@ -188,6 +189,41 @@ async function handle(primary: ConsoleBackend, req: IncomingMessage, res: Server
         /* no raw log yet */
       }
       json(res, 200, { agent, lines });
+      return;
+    }
+
+    // Starting a NEW run is a product action, not a mutation of the viewed
+    // run, so it works from read-only view servers too (still 127.0.0.1-only).
+    if (req.method === 'POST' && url.pathname === '/api/runs/new') {
+      const body = await readBody(req);
+      const repo = String(body.repo ?? '').trim();
+      const goal = String(body.goal ?? '').trim();
+      if (!repo || !goal) {
+        json(res, 400, { error: 'repo and goal are required' });
+        return;
+      }
+      try {
+        if (!statSync(repo).isDirectory()) throw new Error('not a directory');
+      } catch {
+        json(res, 400, { error: `repo path is not a directory: ${repo}` });
+        return;
+      }
+      const args = [process.argv[1]!, 'run', '--repo', repo, '--goal', goal, '--mode', body.mode === 'pair' ? 'pair' : 'team'];
+      const criteria = Array.isArray(body.criteria) ? body.criteria : [];
+      for (const c of criteria.slice(0, 8)) {
+        const t = String(c).trim();
+        if (t) args.push('--criteria', t);
+      }
+      if (body.auto) {
+        args.push('--auto');
+        const it = Number(body.iterate ?? 0);
+        if (Number.isInteger(it) && it > 0) args.push('--iterate', String(Math.min(it, 20)));
+      }
+      const log = join(tmpdir(), `pitwall-run-${Date.now()}.log`);
+      const out = openSync(log, 'a');
+      const child = spawn(process.execPath, args, { detached: true, stdio: ['ignore', out, out] });
+      child.unref();
+      json(res, 200, { ok: true, pid: child.pid, log });
       return;
     }
 
