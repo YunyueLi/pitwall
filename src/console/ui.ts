@@ -234,6 +234,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .pfp { width: 23px; height: 23px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 11px; font-weight: 660; box-shadow: var(--shadow-s); }
   .pfp.agent { background: var(--ink); color: var(--paper); }
   .pfp.agent2 { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line2), var(--shadow-s); }
+  .pfp svg { width: 15px; height: 15px; display: block; }
+  .pfp.claude { background: #F2E4DB; color: #C15F3C; box-shadow: inset 0 0 0 1px rgba(193,95,60,.16), var(--shadow-s); }
+  .pfp.openai { background: #0D0D0D; color: #fff; box-shadow: var(--shadow-s); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pfp.claude { background: rgba(217,119,87,.18); color: #E0906C; box-shadow: none; } :root:not([data-theme="light"]) .pfp.openai { background: #F2F1EC; color: #0D0D0D; } }
+  :root[data-theme="dark"] .pfp.claude { background: rgba(217,119,87,.18); color: #E0906C; box-shadow: none; }
+  :root[data-theme="dark"] .pfp.openai { background: #F2F1EC; color: #0D0D0D; }
   .pfp.human { background: linear-gradient(135deg, var(--flag), color-mix(in srgb, var(--flag) 60%, var(--bad))); color: #fff; }
   .msg .n { font-weight: 620; font-size: 13.5px; }
   .msg .r { font-size: 12px; color: var(--ink3); }
@@ -319,6 +325,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .agentcard:hover { background: var(--fill); }
   .agentcard .top { display: flex; align-items: center; gap: 9px; }
   .agentcard .pfp { width: 21px; height: 21px; font-size: 10px; box-shadow: none; }
+  .agentcard .pfp svg { width: 13px; height: 13px; }
   .agentcard .nm { font-size: 13px; font-weight: 560; }
   .agentcard .rl { font-size: 11.5px; color: var(--ink3); }
   .agentcard .top .dot { margin-left: auto; }
@@ -733,7 +740,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     setHtml('agents', s.agents.map(function (a) {
       var idx = agentIdx[a.name] || 0;
       var st = a.state === 'working' ? 'working' : a.state === 'paused' ? 'paused' : a.state === 'dead' ? 'dead' : '';
-      return '<div class="agentcard"><div class="top"><span class="pfp ' + (idx === 0 ? 'agent' : 'agent2') + '">' + esc(String(a.name).charAt(0).toUpperCase()) + '</span>'
+      return '<div class="agentcard"><div class="top">' + avatar(a.name, false)
         + '<span class="nm">' + esc(a.name) + '</span><span class="rl">' + esc(t(a.role)) + '</span><span class="dot ' + st + '"></span></div>'
         + '<div class="mt">' + a.totals.turns + ' ' + t('turns') + ' · ' + (a.totals.costUsd ? money(a.totals.costUsd) : ftok(a.totals.inputTokens + a.totals.outputTokens) + ' tok') + '</div>'
         + (s.readonly ? '' : '<div class="acts">'
@@ -784,7 +791,17 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   // ---- conversation
   var curSteps = null;
   function roleOf(name) { if (!state) return ''; var a = state.agents.filter(function (x) { return x.name === name; })[0]; return a ? a.role : ''; }
-  function pfp(name, human) { if (human) return '<span class="pfp human">' + (lang === 'zh' ? '你' : 'U') + '</span>'; var cls = (agentIdx[name] || 0) === 0 ? 'agent' : 'agent2'; return '<span class="pfp ' + cls + '">' + esc(String(name).charAt(0).toUpperCase()) + '</span>'; }
+  function adapterOf(name) { if (!state) return ''; var a = state.agents.filter(function (x) { return x.name === name; })[0]; return a ? (a.adapter || '') : ''; }
+  var CLAUDE_MK = (function () { var r = ''; for (var i = 0; i < 11; i++) r += '<rect x="11.35" y="1.7" width="1.3" height="7.3" rx="0.65" transform="rotate(' + (i * 32.7) + ' 12 12)"/>'; return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + r + '</svg>'; })();
+  var OPENAI_MK = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-3.99 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 22a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.06 6.06 0 0 0-.75-7.07zm-9.02 12.6a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.79.79 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.5 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.01l.14.08 4.78 2.76c.24.14.53.14.77 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 22a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.48 4.48 0 0 1 2.34-1.97V11.6a.77.77 0 0 0 .38.68l5.84 3.37-2.02 1.17a.08.08 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.61 3.85l-5.84-3.36 2.02-1.17a.08.08 0 0 1 .07 0l4.83 2.79a4.5 4.5 0 0 1-.68 8.12v-5.7a.79.79 0 0 0-.4-.68zm2-3.03l-.14-.08-4.78-2.77a.78.78 0 0 0-.77 0L9.43 9.24V6.9a.07.07 0 0 1 .03-.06l4.83-2.78a4.5 4.5 0 0 1 6.68 4.66zM8.33 12.85l-2.02-1.17a.08.08 0 0 1-.04-.05V6.06a4.5 4.5 0 0 1 7.38-3.45l-.14.08-4.78 2.76a.79.79 0 0 0-.39.68zm1.1-2.37L12 9l2.58 1.48v2.98L12 14.94l-2.58-1.48z"/></svg>';
+  function vendorClass(ad) { ad = (ad || '').toLowerCase(); if (ad.indexOf('claude') >= 0 || ad.indexOf('anthropic') >= 0) return 'claude'; if (ad.indexOf('codex') >= 0 || ad.indexOf('openai') >= 0 || ad.indexOf('gpt') >= 0) return 'openai'; return ''; }
+  function avatar(name, human) {
+    if (human) return '<span class="pfp human">' + (lang === 'zh' ? '你' : 'U') + '</span>';
+    var v = vendorClass(adapterOf(name));
+    if (v === 'claude') return '<span class="pfp claude">' + CLAUDE_MK + '</span>';
+    if (v === 'openai') return '<span class="pfp openai">' + OPENAI_MK + '</span>';
+    return '<span class="pfp agent2">' + esc(String(name).charAt(0).toUpperCase()) + '</span>';
+  }
   function isPrimary(e) { switch (e.type) { case 'message': case 'directive': case 'note': case 'goal.updated': case 'approval.requested': case 'approval.resolved': case 'task.created': case 'task.updated': case 'run.created': case 'run.status': case 'error': return true; default: return false; } }
   function agentMessage(env) {
     var e = env.event, human = env.origin.kind === 'human', name = human ? t('You') : (e.from || 'system');
@@ -800,12 +817,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       else if (parsed.json.status) chip = parsed.json.status === 'done' ? '<div class="verdict ok">✓ ' + t('reports done') + '</div>' : '<div class="verdict no">— ' + t(parsed.json.status) + '</div>';
     }
     var role = human ? '' : roleOf(name);
-    return '<div class="msg"><div class="head">' + pfp(name, human) + '<span class="n">' + esc(name) + '</span>' + (role ? '<span class="r">' + esc(t(role)) + '</span>' : '') + tag + '<span class="t">' + tstr(env.ts) + '</span></div><div class="body' + rule + '">' + clipBody(e.text) + chip + '</div></div>';
+    return '<div class="msg"><div class="head">' + avatar(name, human) + '<span class="n">' + esc(name) + '</span>' + (role ? '<span class="r">' + esc(t(role)) + '</span>' : '') + tag + '<span class="t">' + tstr(env.ts) + '</span></div><div class="body' + rule + '">' + clipBody(e.text) + chip + '</div></div>';
   }
   function humanBlock(env) {
     var e = env.event;
     var label = e.type === 'directive' ? t('directive') + ' → ' + (e.scope === 'all' ? t('to all') : esc(e.scope)) + ' · ' + t(e.mode) + (e.interrupt ? ' · ' + t('interrupt') : '') : e.type === 'goal.updated' ? t('goal update') + ' · ' + t(e.mode) : t('note');
-    return '<div class="msg"><div class="head">' + pfp('', true) + '<span class="n">' + t('You') + '</span><span class="tag hm">' + label + '</span><span class="t">' + tstr(env.ts) + '</span></div><div class="body rule hm">' + md(e.text) + '</div></div>';
+    return '<div class="msg"><div class="head">' + avatar('', true) + '<span class="n">' + t('You') + '</span><span class="tag hm">' + label + '</span><span class="t">' + tstr(env.ts) + '</span></div><div class="body rule hm">' + md(e.text) + '</div></div>';
   }
   function sysLine(cls, mk, html) { return '<div class="sys ' + cls + '"><span class="mk2">' + mk + '</span><span>' + html + '</span></div>'; }
   var STAGE = { pending: 'planned', 'in-progress': 'building', 'needs-review': 'in review', accepted: 'accepted' };
