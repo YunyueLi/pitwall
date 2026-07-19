@@ -229,6 +229,15 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   :root[data-theme="dark"] .pfp.claude { background: rgba(217,119,87,.18); color: #E0906C; box-shadow: none; }
   :root[data-theme="dark"] .pfp.openai { background: #F2F1EC; color: #0D0D0D; }
   .pfp.human { background: linear-gradient(135deg, var(--flag), color-mix(in srgb, var(--flag) 60%, var(--bad))); color: #fff; }
+  .pfp.g0 { background: #DCE5F2; color: #45659C; } .pfp.g1 { background: #DFEDE2; color: #3E7D57; }
+  .pfp.g2 { background: #E6E0F0; color: #6D5BA8; } .pfp.g3 { background: #F2E8D5; color: #96701F; }
+  .pfp.g4 { background: #F2DFE1; color: #A85560; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pfp.g0 { background: rgba(94,138,204,.2); color: #8FB2E8; } :root:not([data-theme="light"]) .pfp.g1 { background: rgba(84,168,118,.2); color: #7FC79B; } :root:not([data-theme="light"]) .pfp.g2 { background: rgba(141,118,205,.2); color: #B3A1E3; } :root:not([data-theme="light"]) .pfp.g3 { background: rgba(199,158,64,.2); color: #DDBA6E; } :root:not([data-theme="light"]) .pfp.g4 { background: rgba(204,113,126,.2); color: #E39AA6; } }
+  :root[data-theme="dark"] .pfp.g0 { background: rgba(94,138,204,.2); color: #8FB2E8; }
+  :root[data-theme="dark"] .pfp.g1 { background: rgba(84,168,118,.2); color: #7FC79B; }
+  :root[data-theme="dark"] .pfp.g2 { background: rgba(141,118,205,.2); color: #B3A1E3; }
+  :root[data-theme="dark"] .pfp.g3 { background: rgba(199,158,64,.2); color: #DDBA6E; }
+  :root[data-theme="dark"] .pfp.g4 { background: rgba(204,113,126,.2); color: #E39AA6; }
   .msg .n { font-weight: 620; font-size: 13.5px; }
   .msg .r { font-size: 12px; color: var(--ink3); }
   .msg .t { margin-left: auto; font: 11px var(--mono); color: var(--ink4); opacity: 0; transition: opacity .2s; }
@@ -1180,9 +1189,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var started = s.startedTs ? new Date(s.startedTs).getTime() : Date.now();
     var ended = (s.status === 'done' || s.status === 'failed') && s.lastTs ? new Date(s.lastTs).getTime() : Date.now();
     var mins = Math.max(0, Math.round((ended - started) / 60000));
-    var dur = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' min';
+    var dur = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins >= 1 ? mins + ' min' : Math.max(1, Math.round((ended - started) / 1000)) + 's';
     function cell(l, v, u) { return '<div class="cell"><div class="l">' + esc(l) + '</div><div class="v">' + v + (u ? ' <small>' + esc(u) + '</small>' : '') + '</div></div>'; }
-    setHtml('teleGrid', cell(t('cost'), esc(money(cost))) + cell(t('tokens'), esc(ftok(tok))) + cell(t('turns'), esc(String(turns))) + cell(t('elapsed'), esc(dur)));
+    setHtml('teleGrid', cell(t('cost'), cost ? esc(money(cost)) : '—') + cell(t('tokens'), tok ? esc(ftok(tok)) : '—') + cell(t('turns'), esc(String(turns))) + cell(t('elapsed'), esc(dur)));
     $('pfill').style.width = (tasks.length ? Math.round(done / tasks.length * 100) : (s.status === 'done' ? 100 : 0)) + '%';
 
     $('agentsSec').style.display = s.agents.length ? '' : 'none';
@@ -1191,7 +1200,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
       var st = a.state === 'working' ? 'working' : a.state === 'paused' ? 'paused' : a.state === 'dead' ? 'dead' : '';
       return '<div class="agentcard"><div class="top">' + avatar(a.name, false)
         + '<span class="nm">' + esc(a.name) + '</span><span class="rl">' + esc(t(a.role)) + '</span><span class="dot ' + st + '"></span></div>'
-        + '<div class="mt">' + a.totals.turns + ' ' + t('turns') + ' · ' + (a.totals.costUsd ? money(a.totals.costUsd) : ftok(a.totals.inputTokens + a.totals.outputTokens) + ' tok') + '</div>'
+        + '<div class="mt">' + a.totals.turns + ' ' + t('turns') + (a.totals.costUsd ? ' · ' + money(a.totals.costUsd) : (a.totals.inputTokens + a.totals.outputTokens) ? ' · ' + ftok(a.totals.inputTokens + a.totals.outputTokens) + ' tok' : '') + '</div>'
         + (s.readonly ? '' : '<div class="acts">'
           + (a.state === 'paused' ? '<button class="lbtn" data-act="unpause" data-agent="' + esc(a.name) + '">' + t('Resume') + '</button>' : '<button class="lbtn" data-act="pause" data-agent="' + esc(a.name) + '">' + t('Pause') + '</button>')
           + (a.state === 'working' ? '<button class="lbtn bad" data-act="interrupt" data-agent="' + esc(a.name) + '">' + t('Interrupt') + '</button>' : '')
@@ -1279,7 +1288,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     var v = vendorClass(adapterOf(name));
     if (v === 'claude') return '<span class="pfp claude">' + CLAUDE_MK + '</span>';
     if (v === 'openai') return '<span class="pfp openai">' + OPENAI_MK + '</span>';
-    return '<span class="pfp agent2">' + esc(String(name).charAt(0).toUpperCase()) + '</span>';
+    var h = 0, s = String(name || 'a');
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return '<span class="pfp agent2 g' + (h % 5) + '" title="' + esc(adapterOf(name)) + '">' + esc(s.charAt(0).toUpperCase()) + '</span>';
   }
   function isPrimary(e) { switch (e.type) { case 'message': case 'directive': case 'note': case 'goal.updated': case 'approval.requested': case 'approval.resolved': case 'task.created': case 'task.updated': case 'run.created': case 'run.status': case 'error': return true; default: return false; } }
   function agentMessage(env) {
@@ -1406,6 +1417,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   if (sp.get('menu')) document.body.classList.add('acct-open');
   if (sp.get('pal')) setTimeout(openPal, 200);
   if (sp.get('form')) setTimeout(openForm, 250);
+  if (sp.get('adv')) { var advEl = $('nfAdv'); if (advEl) advEl.open = true; }
   var tq = sp.get('tab');
   if (tq === 'overview' || tq === 'activity' || tq === 'changes' || tq === 'term') setTab(tq);
   setInterval(loadRuns, 30000);
