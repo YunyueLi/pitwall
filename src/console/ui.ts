@@ -116,8 +116,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .mk { width: 26px; height: 26px; flex: none; }
   .mk svg { width: 100%; height: 100%; display: block; }
   .mk .ring, .mk .core { transform-box: view-box; transform-origin: 50px 50px; }
-  .mk.spin .ring { animation: mkspin .72s cubic-bezier(.45,.05,.2,1); }
-  .mk.spin .core { animation: mkpop .72s cubic-bezier(.2,.8,.3,1); }
+  .mk.whirl .ring { animation: mkspin .72s cubic-bezier(.45,.05,.2,1); }
+  .mk.whirl .core { animation: mkpop .72s cubic-bezier(.2,.8,.3,1); }
   @keyframes mkspin { to { transform: rotate(180deg); } }
   @keyframes mkpop { 30% { transform: scale(1.4); } 100% { transform: scale(1); } }
   .brand .nm { font-weight: 680; font-size: 14.5px; letter-spacing: -.012em; line-height: 1; white-space: nowrap; }
@@ -877,8 +877,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   }
 
   // ---- sidebar collapse / peek / logo / search
-  function spinMark() { var m = $('mk'); if (!m || reduce) return; m.classList.remove('spin'); void m.offsetWidth; m.classList.add('spin'); }
-  $('mk').addEventListener('animationend', function () { $('mk').classList.remove('spin'); }, true);
+  // 'whirl', not 'spin': .spin is the loading-ring style and would shrink the mark.
+  function spinMark() { var m = $('mk'); if (!m || reduce) return; m.classList.remove('whirl'); void m.offsetWidth; m.classList.add('whirl'); }
+  $('mk').addEventListener('animationend', function () { $('mk').classList.remove('whirl'); }, true);
   function toggleSide() { spinMark(); var off = document.body.classList.toggle('side-off'); localStorage.setItem('pitwall-side', off ? '1' : '0'); $('side').classList.remove('peek'); }
   function openDrawer() { $('side').classList.add('open'); document.body.classList.add('side-open'); }
   function closeDrawer() { $('side').classList.remove('open'); document.body.classList.remove('side-open'); }
