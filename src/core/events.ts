@@ -82,6 +82,7 @@ export type RunEvent =
   | ApprovalResolved
   | ToolUsed
   | FilesChanged
+  | DiffCaptured
   | Note
   | ErrorEvent;
 
@@ -258,6 +259,28 @@ export interface FilesChanged {
   turnId?: string;
   changes: { path: string; kind: 'created' | 'modified' | 'deleted' }[];
   source: 'tool' | 'git-scan';
+}
+
+/** Evidence snapshot taken at turn end: unified diffs (working tree vs HEAD)
+ * for the files this turn touched. The ledger keeps what the change looked
+ * like at the time, so finished and offline runs can replay their changes
+ * long after the working tree has moved on or been committed. */
+export interface DiffCaptured {
+  type: 'diff.captured';
+  agent: string;
+  turnId: string;
+  /** The task this turn was executing, when the caller knew it. */
+  taskId?: string;
+  files: DiffFile[];
+}
+
+export interface DiffFile {
+  path: string;
+  kind: 'created' | 'modified' | 'deleted';
+  /** Unified diff text. Empty when the snapshot budget was exhausted. */
+  patch: string;
+  /** Set when the patch was cut to fit per-file or per-event limits. */
+  truncated?: boolean;
 }
 
 /** Free-form human annotation on the record. */

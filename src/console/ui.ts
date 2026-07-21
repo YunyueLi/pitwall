@@ -369,6 +369,9 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   .fkind.modified { background: var(--live-fill); color: var(--live); }
   .fkind.deleted { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
   .frow .fp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fgrp { font: 600 11.5px/1.4 var(--sans); color: var(--ink3); margin: 13px 0 4px; padding-top: 11px; border-top: 1px solid var(--line); display: flex; align-items: baseline; gap: 8px; }
+  .fgrp:first-child { margin-top: 2px; padding-top: 0; border-top: 0; }
+  .fgrp .gn { margin-left: auto; font: 11px var(--mono); color: var(--ink4); }
 
   /* composer */
   .composer { position: absolute; left: 260px; right: 400px; bottom: 0; z-index: 12; padding: 16px 30px 20px; background: linear-gradient(180deg, transparent, var(--paper) 44%); pointer-events: none; transition: left .34s var(--spring), right .34s var(--spring); }
@@ -635,7 +638,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     <div class="rpane" data-pane="activity"><div class="act" id="actFeed"></div></div>
     <div class="rpane" data-pane="changes">
       <div id="chgHome"><div class="rh" style="display:flex;align-items:baseline;margin-bottom:11px"><span id="secFiles"></span><span class="n" id="fileCount" style="margin-left:auto;font-family:var(--mono);color:var(--ink4)"></span></div><div id="files"></div><div class="actempty" id="filesEmpty" style="display:none"></div></div>
-      <div id="chgView" style="display:none"><button class="chgback" id="chgBack">‹ <span id="chgBackT"></span></button><div class="chgdiff"><div class="dbody" id="chgBody"></div></div></div>
+      <div id="chgView" style="display:none"><div style="display:flex;align-items:center;gap:8px"><button class="chgback" id="chgBack">‹ <span id="chgBackT"></span></button><span class="n" id="chgSrc" style="margin-left:auto;font-size:11px;color:var(--ink4)"></span></div><div class="chgdiff"><div class="dbody" id="chgBody"></div></div></div>
     </div>
     <div class="rpane" data-pane="term">
       <div class="termsel" id="termSel"></div>
@@ -728,6 +731,8 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     'Theme: light': '主题：浅色', 'Theme: dark': '主题：深色', 'Theme: system': '主题：跟随系统',
     'Language: 中文 / English': '语言：中文 / English', 'View working-tree diff': '查看全部代码改动', 'Open GitHub repo': '打开 GitHub 仓库',
     'Changes to': '改动', 'No changes.': '暂无改动。', 'diff': '代码改动',
+    'Other changes': '其他改动', 'Working tree (live)': '当前工作区', 'Replayed from the ledger': '账本回放',
+    'Change too large; recorded partially.': '改动过大，账本仅部分记录。',
     'Overview': '总览', 'Activity': '活动', 'Diffs': '改动', 'Terminal': '终端',
     'No activity yet.': '暂无活动。', 'No output yet.': '暂无输出。', 'No file changes yet.': '尚无文件改动。',
     'Repository path': '仓库路径', 'Absolute path to a local repository.': '本机仓库的绝对路径。',
@@ -906,19 +911,42 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     else if (l.charAt(0) === '-') cls += ' del';
     return '<div class="' + cls + '">' + (esc(l) || ' ') + '</div>';
   }
+  // Live runs show the working tree (freshest truth). Once the run is offline
+  // the tree has usually moved on, so we replay the ledger's recorded
+  // snapshots instead — with a fallback for runs that predate diff capture.
+  function fetchDiff(path, cb) {
+    var ledger = !!(state && state.live === false);
+    var q = '/api/diff?path=' + encodeURIComponent(path || '');
+    fetch(api(q + (ledger ? '&from=ledger' : '')))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var txt = (d && d.diff) || '';
+        if (!txt.trim() && ledger) {
+          fetch(api(q)).then(function (r) { return r.json(); }).then(function (d2) { cb((d2 && d2.diff) || '', false); }, function () { cb('', true); });
+          return;
+        }
+        cb(txt, ledger);
+      })
+      .catch(function () { cb('', ledger); });
+  }
+  function diffEmptyMsg(path, fromLedger) {
+    if (fromLedger && state) {
+      var m = (state.diffs || []).filter(function (d) { return relPath(d.path) === path; })[0];
+      if (m && m.truncated) return t('Change too large; recorded partially.');
+    }
+    return t('No changes.');
+  }
+  function diffSrcLabel(fromLedger) { return t(fromLedger ? 'Replayed from the ledger' : 'Working tree (live)'); }
   function openDiff(path) {
     document.body.classList.add('dlg-open');
     $('dlgKind').textContent = t('diff');
     $('dlgPath').textContent = path || (state && state.repo ? state.repo.split('/').pop() : '');
     $('dlgBody').innerHTML = '<div class="dempty"><span class="spin"></span></div>';
-    fetch(api('/api/diff' + (path ? '?path=' + encodeURIComponent(path) : '')))
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var txt = (d && d.diff) || '';
-        if (!txt.trim()) { $('dlgBody').innerHTML = '<div class="dempty">' + t('No changes.') + '</div>'; return; }
-        $('dlgBody').innerHTML = txt.split('\n').map(diffLine).join('');
-      })
-      .catch(function () { $('dlgBody').innerHTML = '<div class="dempty">' + t('No changes.') + '</div>'; });
+    fetchDiff(path, function (txt, fromLedger) {
+      $('dlgKind').textContent = t('diff') + ' · ' + diffSrcLabel(fromLedger);
+      if (!txt.trim()) { $('dlgBody').innerHTML = '<div class="dempty">' + diffEmptyMsg(path, fromLedger) + '</div>'; return; }
+      $('dlgBody').innerHTML = txt.split('\n').map(diffLine).join('');
+    });
   }
   function closeDiff() { document.body.classList.remove('dlg-open'); }
   $('dlgClose').onclick = closeDiff; $('dlgScrim').onclick = closeDiff;
@@ -1028,11 +1056,12 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   // inline diff inside the Diffs pane
   function chgShow(path) {
     $('chgHome').style.display = 'none'; $('chgView').style.display = '';
+    $('chgSrc').textContent = '';
     $('chgBody').innerHTML = '<div class="dempty"><span class="spin"></span></div>';
-    fetch(api('/api/diff?path=' + encodeURIComponent(path))).then(function (r) { return r.json(); }).then(function (d) {
-      var txt = (d && d.diff) || '';
-      $('chgBody').innerHTML = txt.trim() ? txt.split('\n').map(diffLine).join('') : '<div class="dempty">' + t('No changes.') + '</div>';
-    }).catch(function () { $('chgBody').innerHTML = '<div class="dempty">' + t('No changes.') + '</div>'; });
+    fetchDiff(path, function (txt, fromLedger) {
+      $('chgSrc').textContent = diffSrcLabel(fromLedger);
+      $('chgBody').innerHTML = txt.trim() ? txt.split('\n').map(diffLine).join('') : '<div class="dempty">' + diffEmptyMsg(path, fromLedger) + '</div>';
+    });
   }
   $('chgBack').onclick = function () { $('chgView').style.display = 'none'; $('chgHome').style.display = ''; };
 
@@ -1214,7 +1243,31 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
     (s.files || []).forEach(function (f) { var p = relPath(f.path); if (seenF[p] != null) { if (f.kind) files[seenF[p]].kind = f.kind; } else { seenF[p] = files.length; files.push({ path: p, kind: f.kind }); } });
     $('filesEmpty').style.display = files.length ? 'none' : '';
     $('fileCount').textContent = files.length || '';
-    setHtml('files', files.slice(-60).map(function (f) { var k = f.kind || 'modified', L = k === 'added' ? 'A' : k === 'deleted' ? 'D' : 'M'; return '<div class="frow" data-path="' + esc(f.path) + '" title="' + (lang === 'zh' ? '查看改动' : 'View diff') + '"><span class="fkind ' + k + '">' + L + '</span><span class="fp">' + esc(f.path) + '</span></div>'; }).join(''));
+    function frowHtml(f) {
+      var k = f.kind || 'modified', cls = (k === 'created' || k === 'added') ? 'added' : k, L = cls === 'added' ? 'A' : cls === 'deleted' ? 'D' : 'M';
+      return '<div class="frow" data-path="' + esc(f.path) + '" title="' + (lang === 'zh' ? '查看改动' : 'View diff') + '"><span class="fkind ' + cls + '">' + L + '</span><span class="fp">' + esc(f.path) + '</span></div>';
+    }
+    // Group files under the task whose turn recorded their latest diff.
+    // Runs that predate diff capture have no attribution and keep the flat list.
+    var taskOf = {}, hasAttr = false;
+    (s.diffs || []).forEach(function (d) { var tid = d.taskId || ''; taskOf[relPath(d.path)] = tid; if (tid) hasAttr = true; });
+    files = files.slice(-120);
+    if (!hasAttr) {
+      setHtml('files', files.map(frowHtml).join(''));
+    } else {
+      var groups = {};
+      files.forEach(function (f) { var tid = taskOf[f.path] || ''; (groups[tid] = groups[tid] || []).push(f); });
+      var html = '';
+      s.tasks.forEach(function (x) {
+        if (!groups[x.taskId]) return;
+        html += '<div class="fgrp"><span>' + esc(x.title) + '</span><span class="gn">' + groups[x.taskId].length + '</span></div>' + groups[x.taskId].map(frowHtml).join('');
+        delete groups[x.taskId];
+      });
+      var rest = [];
+      Object.keys(groups).forEach(function (k2) { rest = rest.concat(groups[k2]); });
+      if (rest.length) html += '<div class="fgrp"><span>' + t('Other changes') + '</span><span class="gn">' + rest.length + '</span></div>' + rest.map(frowHtml).join('');
+      setHtml('files', html);
+    }
 
     setHtml('decisions', pend.map(function (a) {
       return '<div class="decision"><div class="core"><div class="k"><span class="di"></span>' + esc(gateLabel(a.gate)) + '</div>'
@@ -1337,6 +1390,7 @@ export const UI_HTML = String.raw`<!DOCTYPE html>
   function stepsLabel(c) { var b = [c.count + ' ' + t('steps')]; if (c.secs) b.push(c.secs + 's'); if (c.cost) b.push('$' + c.cost.toFixed(2)); var ags = Object.keys(c.agents); return (ags.length ? ags.join(' + ') + ' · ' : '') + b.join(' · '); }
   function appendEvent(env) {
     var e = env.event, conv = $('conv');
+    if (e.type === 'diff.captured') return; // evidence data; shown in the Diffs pane, not the story
     var stick = nearBottom();
     actTouch();
     if (!isPrimary(e)) {

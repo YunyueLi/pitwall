@@ -4,6 +4,7 @@ import { ClaudeAdapter } from '../adapters/claude.js';
 import { CodexAdapter } from '../adapters/codex.js';
 import { GenericCliAdapter } from '../adapters/generic.js';
 import type { AgentSpec, Envelope, RunEvent, Origin } from '../core/events.js';
+import { captureDiffs } from '../core/diffs.js';
 import { newId } from '../core/ids.js';
 import { Ledger } from '../core/ledger.js';
 import {
@@ -593,7 +594,7 @@ export class Orchestrator {
     if (task.status === 'pending') {
       this.append(SYSTEM, { type: 'task.updated', taskId: task.taskId, status: 'in-progress' });
     }
-    const { result, reply } = await this.executeTurn(engineer.name, prompt, newDirectives.map((d) => d.directiveId));
+    const { result, reply } = await this.executeTurn(engineer.name, prompt, newDirectives.map((d) => d.directiveId), task.taskId);
     if (result.outcome !== 'ok') return result.outcome;
 
     const status = reply.json?.status;
@@ -642,7 +643,7 @@ export class Orchestrator {
       newDirectives,
       recovery: this.recoveryTextFor(director.name),
     });
-    const { result, reply } = await this.executeTurn(director.name, prompt, newDirectives.map((d) => d.directiveId));
+    const { result, reply } = await this.executeTurn(director.name, prompt, newDirectives.map((d) => d.directiveId), task.taskId);
     if (result.outcome !== 'ok') return result.outcome;
 
     const verdict = reply.json?.verdict === 'approve' ? 'approve' : 'objection';
@@ -820,7 +821,7 @@ export class Orchestrator {
     if (task.status === 'pending') {
       this.append(SYSTEM, { type: 'task.updated', taskId: task.taskId, status: 'in-progress' });
     }
-    const { result, reply } = await this.executeTurn(driver.name, prompt, newDirectives.map((d) => d.directiveId));
+    const { result, reply } = await this.executeTurn(driver.name, prompt, newDirectives.map((d) => d.directiveId), task.taskId);
     if (result.outcome !== 'ok') return result.outcome === 'interrupted' ? this.classifyInterrupt() : 'error';
 
     const status = reply.json?.status;
@@ -876,7 +877,7 @@ export class Orchestrator {
       recovery,
     });
 
-    const { result, reply } = await this.executeTurn(reviewer.name, prompt, newDirectives.map((d) => d.directiveId));
+    const { result, reply } = await this.executeTurn(reviewer.name, prompt, newDirectives.map((d) => d.directiveId), task.taskId);
     if (result.outcome !== 'ok') return result.outcome === 'interrupted' ? this.classifyInterrupt() : 'error';
 
     const verdict = reply.json?.verdict === 'approve' ? 'approve' : 'objection';
@@ -946,6 +947,7 @@ export class Orchestrator {
     agentName: string,
     prompt: string,
     directiveIds: string[],
+    taskId?: string,
   ): Promise<{ result: { outcome: 'ok' | 'error' | 'interrupted' | 'timeout'; finalText: string; error?: string }; reply: ReturnType<typeof parseAgentReply> }> {
     const adapter = this.adapters.get(agentName)!;
     const raw = this.rawLogs.get(agentName)!;
@@ -1021,7 +1023,7 @@ export class Orchestrator {
       error: timedOut ? `turn exceeded ${this.config.turnTimeoutMs / 60000} min timeout` : turnResult.error,
     });
     this.append(SYSTEM, { type: 'agent.status', agent: agentName, state: 'idle' });
-    this.scanGit(agentName, turnId);
+    this.scanGit(agentName, turnId, taskId);
 
     const outcome = timedOut ? 'timeout' : turnResult.outcome;
     return {
@@ -1138,8 +1140,9 @@ export class Orchestrator {
     return map;
   }
 
-  /** Emit deltas the tool stream may have missed (e.g. files created via Bash). */
-  private scanGit(agent: string, turnId: string): void {
+  /** Emit deltas the tool stream may have missed (e.g. files created via Bash),
+   * then snapshot the touched files' diffs into the ledger as evidence. */
+  private scanGit(agent: string, turnId: string, taskId?: string): void {
     const now = this.gitPorcelain();
     const changes: { path: string; kind: 'created' | 'modified' | 'deleted' }[] = [];
     for (const [path, code] of now) {
@@ -1153,6 +1156,10 @@ export class Orchestrator {
     this.gitBaseline = now;
     if (changes.length) {
       this.append(SYSTEM, { type: 'files.changed', agent, turnId, changes, source: 'git-scan' });
+      const files = captureDiffs(this.config.repo, changes);
+      if (files.some((f) => f.patch || f.truncated)) {
+        this.append(SYSTEM, { type: 'diff.captured', agent, turnId, taskId, files });
+      }
     }
   }
 }

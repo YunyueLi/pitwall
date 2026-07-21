@@ -65,6 +65,15 @@ frame without opening the live stream (used for screenshots).
   reject the pending gate, working-tree diff, panel toggles, theme, language),
   then fuzzy-matched runs. `?pal=1` deep-links it.
 - Clicking a file under **Changes** (or the palette's diff action) opens the
-  **diff dialog** — `git diff` against HEAD, additions/deletions tinted,
-  hunk headers in blue, untracked files rendered as all-added. `?diff=path`
-  deep-links one file's diff; readonly view servers serve it too.
+  **diff dialog** — additions/deletions tinted, hunk headers in blue,
+  untracked files rendered as all-added. `?diff=path` deep-links one file's
+  diff; readonly view servers serve it too.
+- **Changes are grouped by task**: each turn's diffs are recorded into the
+  ledger (`diff.captured`, attributed to the task the turn was executing), so
+  the file list shows one quiet group header per task, "其他改动 / Other
+  changes" last. Runs that predate capture keep the flat list.
+- **Two diff sources, labelled honestly**: a live run shows the working tree
+  (freshest truth); a finished or offline run replays the ledger's recorded
+  snapshots — "账本回放 / Replayed from the ledger" — because its tree has
+  usually moved on or been committed. Old runs without snapshots fall back to
+  the working tree, labelled "当前工作区 / Working tree (live)".

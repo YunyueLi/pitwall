@@ -1,10 +1,11 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { openSync, readFileSync, statSync, unwatchFile, watchFile } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Orchestrator } from '../orchestrator/orchestrator.js';
 import { layerOf, type Envelope } from '../core/events.js';
+import { workingTreeDiff } from '../core/diffs.js';
 import { readLedgerFile } from '../core/ledger.js';
 import { reduce } from '../core/state.js';
 import { listRuns, readControl, runDir, writeControl } from '../core/store.js';
@@ -172,7 +173,17 @@ async function handle(primary: ConsoleBackend, req: IncomingMessage, res: Server
         json(res, 400, { error: 'bad path' });
         return;
       }
-      json(res, 200, { path: p, diff: gitDiff(orch.state().repo, p || undefined) });
+      const s = orch.state();
+      if (url.searchParams.get('from') === 'ledger') {
+        // Replay from the ledger's recorded snapshots: correct for finished and
+        // offline runs, whose working tree has usually moved on since.
+        const diff = p
+          ? (s.diffs.get(p)?.patch ?? '')
+          : [...s.diffs.values()].map((d) => d.patch).filter(Boolean).join('');
+        json(res, 200, { path: p, diff, from: 'ledger' });
+        return;
+      }
+      json(res, 200, { path: p, diff: workingTreeDiff(s.repo, p || undefined) });
       return;
     }
     if (req.method === 'GET' && url.pathname.startsWith('/api/raw/')) {
@@ -298,6 +309,9 @@ function serializeState(orch: ConsoleBackend): unknown {
     iterate: created?.type === 'run.created' ? (created.iterate ?? 0) : 0,
     goalsOpened,
     readonly: !!orch.readonly,
+    // A live orchestrator means the working tree still reflects this run;
+    // once it is gone, the ledger's recorded diffs are the truth to show.
+    live: !orch.readonly || !!readControl(orch.dir),
     startedTs: events[0]?.ts,
     lastTs: events[events.length - 1]?.ts,
     status: s.status,
@@ -321,33 +335,22 @@ function serializeState(orch: ConsoleBackend): unknown {
     directives: [...s.directives.values()],
     approvals: [...s.approvals.values()],
     files: [...s.changedFiles.entries()].map(([path, v]) => ({ path, ...v })),
+    // Metadata only: /api/state refetches often, so patch bodies stay behind
+    // /api/diff?from=ledger and are fetched per file on demand.
+    diffs: [...s.diffs.entries()].map(([path, v]) => ({
+      path,
+      kind: v.kind,
+      agent: v.agent,
+      taskId: v.taskId,
+      truncated: v.truncated,
+      patchBytes: v.patch.length,
+    })),
     lastSeq: s.lastSeq,
   };
 }
 
 function json(res: ServerResponse, code: number, data: unknown): void {
   res.writeHead(code, { 'content-type': 'application/json' }).end(JSON.stringify(data));
-}
-
-/** Read-only diff of the working tree against HEAD, optionally for one path.
- * Untracked files come back as an all-added diff. Never throws. */
-function gitDiff(repo: string, path?: string): string {
-  const run = (args: string[]) => {
-    try {
-      return execFileSync('git', args, { cwd: repo, encoding: 'utf8', maxBuffer: 4_000_000, timeout: 5000 });
-    } catch (e: any) {
-      return typeof e?.stdout === 'string' ? e.stdout : ''; // diff --no-index exits 1 when files differ
-    }
-  };
-  const scope = path ? ['--', path] : [];
-  let out = run(['diff', 'HEAD', ...scope]);
-  if (!out.trim()) out = run(['diff', ...scope]);
-  if (!out.trim() && path) out = run(['diff', '--no-index', '--', '/dev/null', path]);
-  if (!out.trim() && !path) {
-    const untracked = run(['ls-files', '--others', '--exclude-standard']).trim();
-    if (untracked) out = untracked.split('\n').map((f: string) => run(['diff', '--no-index', '--', '/dev/null', f])).join('');
-  }
-  return out.length > 400_000 ? out.slice(0, 400_000) + '\n… (truncated)' : out;
 }
 
 function readBody(req: IncomingMessage): Promise<any> {

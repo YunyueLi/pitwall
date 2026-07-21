@@ -59,6 +59,17 @@ export interface ApprovalState {
   note?: string;
 }
 
+/** Latest recorded diff snapshot for one file (from `diff.captured`). */
+export interface DiffState {
+  patch: string;
+  kind: 'created' | 'modified' | 'deleted';
+  truncated?: boolean;
+  agent: string;
+  turnId: string;
+  taskId?: string;
+  ts: string;
+}
+
 export interface RunState {
   runId: string;
   repo: string;
@@ -71,6 +82,8 @@ export interface RunState {
   directives: Map<string, DirectiveState>;
   approvals: Map<string, ApprovalState>;
   changedFiles: Map<string, { kind: string; lastAgent?: string; lastTs: string }>;
+  /** Per-file latest diff snapshot; replays changes without a working tree. */
+  diffs: Map<string, DiffState>;
   lastSeq: number;
 }
 
@@ -85,6 +98,7 @@ export function reduce(history: Envelope[]): RunState {
     directives: new Map(),
     approvals: new Map(),
     changedFiles: new Map(),
+    diffs: new Map(),
     lastSeq: 0,
   };
 
@@ -211,6 +225,19 @@ export function reduce(history: Envelope[]): RunState {
       case 'files.changed':
         for (const c of e.changes) {
           s.changedFiles.set(c.path, { kind: c.kind, lastAgent: e.agent, lastTs: env.ts });
+        }
+        break;
+      case 'diff.captured':
+        for (const f of e.files) {
+          s.diffs.set(f.path, {
+            patch: f.patch,
+            kind: f.kind,
+            truncated: f.truncated,
+            agent: e.agent,
+            turnId: e.turnId,
+            taskId: e.taskId,
+            ts: env.ts,
+          });
         }
         break;
       default:
